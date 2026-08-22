@@ -91,6 +91,13 @@ def diagnose(event: PaymentEvent, ctx: Context) -> Diagnosis:
         else:
             recommended_rail = rail_str
 
+    recommended_message = raw.get("recommended_message")
+    if action == "NUDGE" and not (isinstance(recommended_message, str) and recommended_message.strip()):
+        # a customer-contact action with no actual message text would still
+        # execute (ledger.record_contact fires) with nothing communicated —
+        # fall back to a safe generic message rather than send a blank one
+        recommended_message = "We're following up on a recent payment issue with your order."
+
     confidence = raw.get("confidence", 0.0)
     try:
         confidence = float(confidence)
@@ -111,6 +118,6 @@ def diagnose(event: PaymentEvent, ctx: Context) -> Diagnosis:
         reasoning=str(raw.get("reasoning", ""))[:1000],
         recommended_action=action,
         recommended_rail=recommended_rail,
-        recommended_message=raw.get("recommended_message"),
+        recommended_message=recommended_message,
         recommended_delay_hours=delay,
     )

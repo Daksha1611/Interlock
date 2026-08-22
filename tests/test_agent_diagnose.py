@@ -52,6 +52,19 @@ def test_switch_rail_with_valid_rail_passes_through():
     assert d.recommended_rail == "UPI"
 
 
+def test_nudge_with_no_message_gets_safe_fallback():
+    d = _diagnose_with({"diagnosed_reason": "EXPIRED_CARD", "recommended_action": "NUDGE"})
+    assert d.recommended_action == "NUDGE"
+    assert d.recommended_message and d.recommended_message.strip()
+
+
+def test_nudge_with_blank_message_gets_safe_fallback():
+    d = _diagnose_with({
+        "diagnosed_reason": "EXPIRED_CARD", "recommended_action": "NUDGE", "recommended_message": "   ",
+    })
+    assert d.recommended_message.strip()
+
+
 def test_confidence_clamped_to_unit_interval():
     d = _diagnose_with({"diagnosed_reason": "GATEWAY_TIMEOUT", "recommended_action": "STOP", "confidence": 5.0})
     assert d.confidence == 1.0

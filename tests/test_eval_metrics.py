@@ -197,7 +197,6 @@ def test_recovery_metrics_handles_empty_ledger():
 # --- honesty_metrics ---
 
 def test_diagnosis_confusion_matrix_uses_first_decision_per_order():
-    customer = Customer(customer_id="cust_o1", name="Test")
     ctx = make_ctx()
     r1 = make_record("o1", ActionType.RETRY, "ALLOW", ctx, diagnosed_reason="ISSUER_DOWN", step=0)
     r2 = make_record("o1", ActionType.RETRY, "ALLOW", ctx, diagnosed_reason="GATEWAY_TIMEOUT", step=1)
