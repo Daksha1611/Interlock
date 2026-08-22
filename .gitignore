@@ -7,6 +7,8 @@ runs/*
 !runs/.gitkeep
 !runs/results/
 .ruff_cache/
+.git_push_counter
+.push_log.txt
 data/corpus/*
 data/holdout/*
 !data/corpus/.gitkeep
