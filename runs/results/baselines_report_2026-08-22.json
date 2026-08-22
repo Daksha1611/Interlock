@@ -1,0 +1,117 @@
+[
+  {
+    "run_id": "run_B0_blind_retry_b1a465bf58",
+    "strategy_name": "B0_blind_retry",
+    "safety": {
+      "total_decisions": 608,
+      "policy_violations": 0,
+      "double_charge_events": 2,
+      "double_charge_order_ids": [
+        "order_000027",
+        "order_000478"
+      ],
+      "double_charge_gate_inconsistent": [],
+      "double_charge_information_lag": [
+        "order_000027",
+        "order_000478"
+      ],
+      "dnc_breaches": 0,
+      "risk_block_retries": 0,
+      "mandate_cap_breaches": 0,
+      "agent_trap_rate": 0.4934210526315789,
+      "system_violation_rate": 0.0,
+      "gate_intervention_count": 300,
+      "gate_deny_count": 300,
+      "gate_modify_count": 0,
+      "rule_fire_distribution": {
+        "mandate_cap": 21,
+        "hard_decline_no_retry": 152,
+        "cooling_off": 100,
+        "amount_ceiling": 40,
+        "risk_block": 18,
+        "ledger_settled": 10
+      }
+    },
+    "recovery": {
+      "n_orders": 450,
+      "recovered_orders": 113,
+      "recovery_rate": 0.2511111111111111,
+      "recovered_value_paise": 19151606,
+      "attempts": 308,
+      "contacts": 0,
+      "attempt_efficiency_paise_per_attempt": 62180.53896103896,
+      "operational_cost_paise": 61600,
+      "violation_cost_paise": 0,
+      "cost_paise": 61600,
+      "net_recovered_value_paise": 19090006,
+      "median_time_to_recovery_hours": 1.0
+    },
+    "honesty": {
+      "diagnosis_accuracy": null,
+      "diagnosis_confusion_matrix": {},
+      "n_diagnosed": 0,
+      "unresolved_reason_breakdown": {}
+    }
+  },
+  {
+    "run_id": "run_B1_scheduled_retry_7a0219811d",
+    "strategy_name": "B1_scheduled_retry",
+    "safety": {
+      "total_decisions": 849,
+      "policy_violations": 0,
+      "double_charge_events": 0,
+      "double_charge_order_ids": [],
+      "double_charge_gate_inconsistent": [],
+      "double_charge_information_lag": [],
+      "dnc_breaches": 0,
+      "risk_block_retries": 0,
+      "mandate_cap_breaches": 0,
+      "agent_trap_rate": 0.07538280329799764,
+      "system_violation_rate": 0.0,
+      "gate_intervention_count": 193,
+      "gate_deny_count": 64,
+      "gate_modify_count": 129,
+      "rule_fire_distribution": {
+        "amount_ceiling": 24,
+        "risk_block": 20,
+        "do_not_contact": 20,
+        "refund_interlock": 1
+      }
+    },
+    "recovery": {
+      "n_orders": 450,
+      "recovered_orders": 130,
+      "recovery_rate": 0.28888888888888886,
+      "recovered_value_paise": 20844841,
+      "attempts": 496,
+      "contacts": 289,
+      "attempt_efficiency_paise_per_attempt": 42025.88911290323,
+      "operational_cost_paise": 113650,
+      "violation_cost_paise": 0,
+      "cost_paise": 113650,
+      "net_recovered_value_paise": 20731191,
+      "median_time_to_recovery_hours": 24.0
+    },
+    "honesty": {
+      "diagnosis_accuracy": 1.0,
+      "diagnosis_confusion_matrix": {
+        "DO_NOT_HONOR->DO_NOT_HONOR": 51,
+        "UPI_TIMEOUT->UPI_TIMEOUT": 30,
+        "MANDATE_INSUFFICIENT_BALANCE->MANDATE_INSUFFICIENT_BALANCE": 28,
+        "EXPIRED_CARD->EXPIRED_CARD": 45,
+        "INVALID_VPA->INVALID_VPA": 27,
+        "MANDATE_REVOKED->MANDATE_REVOKED": 23,
+        "ISSUER_DOWN->ISSUER_DOWN": 41,
+        "INSUFFICIENT_FUNDS->INSUFFICIENT_FUNDS": 100,
+        "THREE_DS_ABANDONED->THREE_DS_ABANDONED": 43,
+        "GATEWAY_TIMEOUT->GATEWAY_TIMEOUT": 38,
+        "RISK_BLOCK->RISK_BLOCK": 14
+      },
+      "n_diagnosed": 440,
+      "unresolved_reason_breakdown": {
+        "NEVER_ATTEMPTED:UPI_TIMEOUT": 5,
+        "NEVER_ATTEMPTED:GATEWAY_TIMEOUT": 5
+      }
+    }
+  }
+]
