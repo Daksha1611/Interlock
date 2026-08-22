@@ -129,19 +129,24 @@ def context_to_dict(ctx: Context) -> dict:
 
 
 def context_from_dict(d: dict) -> Context:
+    """Safety-relevant fields are required, not defaulted — a truncated or
+    tampered record must fail loudly (KeyError) rather than silently
+    reconstruct a falsely-safe Context (e.g. a missing `open_chargeback`
+    defaulting to False could replay a correctly-DENIED decision as ALLOW).
+    Only genuinely optional/nullable fields use .get()."""
     return Context(
         now=_parse(d["now"]),
         customer=customer_from_dict(d["customer"]),
-        attempts_so_far=d.get("attempts_so_far", 0),
-        mandate_presentations_so_far=d.get("mandate_presentations_so_far", 0),
+        attempts_so_far=d["attempts_so_far"],
+        mandate_presentations_so_far=d["mandate_presentations_so_far"],
         last_failure_reason=d.get("last_failure_reason"),
         last_attempt_at=_parse(d.get("last_attempt_at")),
         failure_at=_parse(d.get("failure_at")),
-        invoice_already_settled=d.get("invoice_already_settled", False),
-        refund_in_flight=d.get("refund_in_flight", False),
-        open_chargeback=d.get("open_chargeback", False),
+        invoice_already_settled=d["invoice_already_settled"],
+        refund_in_flight=d["refund_in_flight"],
+        open_chargeback=d["open_chargeback"],
         last_contact_at=_parse(d.get("last_contact_at")),
-        amount=d.get("amount", 0),
+        amount=d["amount"],
         amount_ceiling=d.get("amount_ceiling"),
-        extra=d.get("extra", {}),
+        extra=d["extra"],
     )
