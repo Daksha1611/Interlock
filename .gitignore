@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+runs/*
+!runs/.gitkeep
+!runs/results/
+.ruff_cache/
+data/corpus/*
+data/holdout/*
+!data/corpus/.gitkeep
+!data/holdout/.gitkeep
+.pytest_cache/
+*.egg-info/
+.coverage
+htmlcov/
