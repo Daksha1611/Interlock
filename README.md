@@ -49,6 +49,8 @@ uv pip install -e ".[dev]"
 cp .env.example .env   # fill in OPENROUTER_API_KEY for live-agent runs
 ```
 
+OpenRouter's free tier is 50 requests/day per account without added credit. `agent/llm_client.py` supports `OPENROUTER_API_KEYS` (comma-separated) instead of a single `OPENROUTER_API_KEY` — it rotates to the next key automatically the moment one hits its daily cap, no interruption to a run in progress.
+
 Generate the corpus (seeded, deterministic — freeze before touching strategies):
 
 ```bash
