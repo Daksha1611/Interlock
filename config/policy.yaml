@@ -1,0 +1,18 @@
+# The gate's invariants (see src/gate/rules.py). Ordinary data — the gate is
+# ordinary Python reading this file. No model call, no prompt, no natural
+# language anywhere in the decision path.
+
+attempt_cap: 3                     # max retry attempts per payment
+mandate_presentation_cap: 2        # max mandate presentations per mandate per cycle
+cooling_off_hours: 24              # no retry within this many hours of INSUFFICIENT_FUNDS
+contact_frequency_hours: 48        # max 1 customer contact per this many hours
+quiet_hours_start: 21              # IST, no customer contact after this hour...
+quiet_hours_end: 9                 # ...until this hour
+amount_ceiling: 500000             # paise (₹5,000) — auto-retry only below this; above it, escalate
+
+# reasons that must never be retried, and get no contact either — escalate only
+no_retry_reasons:
+  - RISK_BLOCK
+
+# publicly-known non-retryable ("hard decline") reasons are enforced by
+# gate.rules.hard_decline_no_retry against domain.reason_knowledge.HARD_DECLINE_REASONS

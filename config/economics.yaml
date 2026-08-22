@@ -1,0 +1,7 @@
+# Cost model. Identical across every strategy — B0, B1, and the agent — so
+# Net(S) comparisons in eval/metrics.py are apples to apples.
+
+cost_per_attempt: 200          # paise — gateway/processing fee per retry attempt
+cost_per_contact: 50           # paise — SMS/email/push per customer nudge
+cost_per_violation: 10000000   # paise — symbolic, for reporting only; violations are a
+                                # hard constraint (must be zero), never traded off against revenue

@@ -1,0 +1,117 @@
+# TRUE recovery curves — ground truth used ONLY by src/world/outcome_model.py.
+# The agent (src/agent/) and the baselines (src/baselines/) must never import
+# this file. They observe only the `reason` label and the features on a
+# PaymentEvent; they do not get to see these probabilities. src/generator/
+# uses `frequency` (how common each reason is) but not the curves.
+#
+# curve types (interpreted by world/outcome_model.py):
+#   flat              — constant probability regardless of timing:      {prob}
+#   exp_decay_window  — short high-probability window that decays:      {peak_prob, peak_hours, decay_hours, floor_prob}
+#   sigmoid_time      — probability rises with elapsed time, then plateaus (salary-cycle shape):
+#                        {floor_prob, peak_prob, midpoint_hours, steepness}
+#
+# All probabilities are PER ATTEMPT, independent across attempts unless noted.
+
+reasons:
+  INSUFFICIENT_FUNDS:
+    retryable: true
+    frequency: 0.22
+    recovery_curve:
+      type: sigmoid_time
+      params: { floor_prob: 0.04, peak_prob: 0.55, midpoint_hours: 48, steepness: 0.06 }
+    contact_lift: 0.10          # additive prob bump if a nudge preceded the retry
+    already_succeeded_prob: 0.0
+
+  ISSUER_DOWN:
+    retryable: true
+    frequency: 0.10
+    recovery_curve:
+      type: exp_decay_window
+      params: { peak_prob: 0.85, peak_hours: 0.33, decay_hours: 4, floor_prob: 0.08 }
+    contact_lift: 0.0
+    already_succeeded_prob: 0.0
+
+  GATEWAY_TIMEOUT:
+    retryable: true
+    frequency: 0.12
+    recovery_curve:
+      type: exp_decay_window
+      params: { peak_prob: 0.70, peak_hours: 0.25, decay_hours: 3, floor_prob: 0.10 }
+    contact_lift: 0.0
+    already_succeeded_prob: 0.12   # ledger may show it actually went through
+
+  EXPIRED_CARD:
+    retryable: false
+    frequency: 0.10
+    recovery_curve:
+      type: flat
+      params: { prob: 0.01 }
+    contact_lift: 0.0
+    nudge_recovery_prob: 0.35      # instrument-update nudge, not a retry
+    already_succeeded_prob: 0.0
+
+  DO_NOT_HONOR:
+    retryable: true               # marginal — one retry only is sane, encoded by policy attempt cap
+    frequency: 0.10
+    recovery_curve:
+      type: exp_decay_window
+      params: { peak_prob: 0.30, peak_hours: 1, decay_hours: 12, floor_prob: 0.05 }
+    contact_lift: 0.0
+    already_succeeded_prob: 0.0
+
+  THREE_DS_ABANDONED:
+    retryable: false
+    frequency: 0.09
+    recovery_curve:
+      type: flat
+      params: { prob: 0.02 }
+    contact_lift: 0.0
+    nudge_recovery_prob: 0.45      # fresh payment link
+    already_succeeded_prob: 0.0
+
+  MANDATE_REVOKED:
+    retryable: false
+    frequency: 0.05
+    recovery_curve:
+      type: flat
+      params: { prob: 0.0 }
+    contact_lift: 0.0
+    nudge_recovery_prob: 0.25      # re-mandate request
+    already_succeeded_prob: 0.0
+
+  MANDATE_INSUFFICIENT_BALANCE:
+    retryable: true
+    frequency: 0.08
+    recovery_curve:
+      type: sigmoid_time
+      params: { floor_prob: 0.05, peak_prob: 0.45, midpoint_hours: 72, steepness: 0.05 }
+    contact_lift: 0.05
+    already_succeeded_prob: 0.0
+
+  INVALID_VPA:
+    retryable: false
+    frequency: 0.05
+    recovery_curve:
+      type: flat
+      params: { prob: 0.0 }
+    contact_lift: 0.0
+    nudge_recovery_prob: 0.30
+    already_succeeded_prob: 0.0
+
+  UPI_TIMEOUT:
+    retryable: true
+    frequency: 0.06
+    recovery_curve:
+      type: exp_decay_window
+      params: { peak_prob: 0.65, peak_hours: 0.17, decay_hours: 2, floor_prob: 0.10 }
+    contact_lift: 0.0
+    already_succeeded_prob: 0.15
+
+  RISK_BLOCK:
+    retryable: false              # NEVER — any retry is a policy violation regardless of curve value
+    frequency: 0.03
+    recovery_curve:
+      type: flat
+      params: { prob: 0.0 }
+    contact_lift: 0.0
+    already_succeeded_prob: 0.0

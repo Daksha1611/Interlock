@@ -1,0 +1,31 @@
+# Corpus generation. Freeze this (and world/) before writing any strategy —
+# see src/tests/test_isolation.py for the leakage guard.
+
+seed: 20260822
+corpus_size: 600
+holdout_fraction: 0.25         # held-out set inspected exactly once, in step 12
+
+n_customers: 250
+dnc_fraction: 0.06             # fraction of customers on the do-not-contact list
+risk_flagged_fraction: 0.03    # fraction of customers pre-flagged as risky
+
+amount:
+  distribution: lognormal
+  mean_paise: 150000           # ~₹1,500
+  sigma: 0.9
+  min_paise: 5000
+  max_paise: 2000000
+
+rails: [CARD, UPI, NETBANKING, EMANDATE, WALLET]
+
+# background rates of mid-sequence state changes the world simulator applies
+# independently of any strategy (these are what the red-team scenarios also
+# probe deliberately, at 100%, in src/redteam/)
+background:
+  refund_in_flight_prob: 0.01
+  open_chargeback_prob: 0.008
+  post_failure_risk_flag_prob: 0.005
+  dnc_added_mid_sequence_prob: 0.004
+  duplicate_webhook_prob: 0.01
+  external_settlement_prob: 0.015    # settled via another channel (e.g. bank transfer) after the failure
+  refund_window_hours: 72            # how long a refund counts as "in flight" once initiated
