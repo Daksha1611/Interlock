@@ -12,10 +12,6 @@ services:
       - GROQ_API_KEYS=${GROQ_API_KEYS:-}
       - GROQ_MODEL=${GROQ_MODEL:-openai/gpt-oss-20b}
       - GROQ_BASE_URL=${GROQ_BASE_URL:-https://api.groq.com/openai/v1}
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - GEMINI_API_KEYS=${GEMINI_API_KEYS:-}
-      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.6-flash}
-      - GEMINI_BASE_URL=${GEMINI_BASE_URL:-https://generativelanguage.googleapis.com/v1beta/openai}
     volumes:
       - ./data:/app/data
       - ./runs:/app/runs

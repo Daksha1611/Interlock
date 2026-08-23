@@ -49,7 +49,7 @@ uv pip install -e ".[dev]"
 cp .env.example .env   # fill in at least one provider key for live-agent runs
 ```
 
-Live-agent runs need an LLM. `agent/llm_client.py` takes keys for three providers — OpenRouter, Groq, and Gemini — all of which speak the OpenAI chat-completions format, so one client covers them and only the key, base URL, and model name differ. Endpoints are tried in that order and the client moves to the next one when a provider's free-tier quota is spent, so a long run doesn't stop at the first exhausted tier. Any provider left unset is skipped; each also has a plural `*_API_KEYS` form taking a comma-separated list, for several accounts on the same provider.
+Live-agent runs need an LLM. `agent/llm_client.py` takes keys for two providers — OpenRouter, with Groq as the backup — both of which speak the OpenAI chat-completions format, so one client covers them and only the key, base URL, and model name differ. Endpoints are tried in that order and the client moves to the next one when a provider's free-tier quota is spent, so a long run doesn't stop at the first exhausted tier. Any provider left unset is skipped; each also has a plural `*_API_KEYS` form taking a comma-separated list, for several accounts on the same provider.
 
 This matters because the free tiers are small and very unevenly sized — OpenRouter allows ~50 requests/day per account without added credit, where Groq's is roughly 1000/day per model. Chaining them is what makes a full evaluation run affordable at zero cost.
 

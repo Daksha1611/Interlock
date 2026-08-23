@@ -33,11 +33,12 @@ class _Endpoint:
 
 
 # Order matters: earlier providers are preferred, later ones are the fallback
-# once the earlier tiers are spent for the day.
+# once the earlier tiers are spent for the day. Adding a provider is one more
+# entry here plus its keys in the environment, as long as it speaks the
+# OpenAI chat-completions format.
 _PROVIDERS = (
     ("OPENROUTER", "https://openrouter.ai/api/v1", "openrouter/free"),
     ("GROQ", "https://api.groq.com/openai/v1", "openai/gpt-oss-20b"),
-    ("GEMINI", "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-3.6-flash"),
 )
 
 _clients: dict[tuple[str, str], OpenAI] = {}
@@ -61,9 +62,8 @@ def _load_endpoints() -> list[_Endpoint]:
             endpoints.append(_Endpoint(prefix, key, base_url, model))
     if not endpoints:
         raise RuntimeError(
-            "No LLM API key found. Set at least one of OPENROUTER_API_KEY(S), "
-            "GROQ_API_KEY(S), or GEMINI_API_KEY(S) — copy .env.example to .env "
-            "and fill one in."
+            "No LLM API key found. Set OPENROUTER_API_KEY(S) and/or "
+            "GROQ_API_KEY(S) — copy .env.example to .env and fill one in."
         )
     return endpoints
 
@@ -76,7 +76,7 @@ def _client_for(ep: _Endpoint) -> OpenAI:
 
 
 _DAILY_CAP_RE = re.compile(
-    r"per[-_ ]day"       # OpenRouter "free-models-per-day", Gemini "..._per_model_per_day"
+    r"per[-_ ]day"       # OpenRouter says "free-models-per-day"; separators vary by provider
     r"|per[-_ ]diem"
     r"|\b[rt]pd\b"       # Groq spells the daily ceilings RPD / TPD
     r"|daily (?:limit|quota)",

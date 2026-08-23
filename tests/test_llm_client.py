@@ -15,7 +15,6 @@ from agent import llm_client
 ALL_KEY_VARS = [
     "OPENROUTER_API_KEY", "OPENROUTER_API_KEYS",
     "GROQ_API_KEY", "GROQ_API_KEYS",
-    "GEMINI_API_KEY", "GEMINI_API_KEYS",
 ]
 
 
@@ -105,13 +104,14 @@ def test_falls_through_to_next_provider_when_first_is_capped(monkeypatch):
     assert call_log == [("or-key", "openrouter/free"), ("groq-key", "openai/gpt-oss-20b")]
 
 
-def test_provider_order_is_openrouter_then_groq_then_gemini(monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "gem-key")
+def test_provider_order_is_openrouter_then_groq(monkeypatch):
+    """Order is fixed by _PROVIDERS, not by which key happens to be set first
+    in the environment — OpenRouter is preferred, Groq is the backup."""
     monkeypatch.setenv("GROQ_API_KEY", "groq-key")
     monkeypatch.setenv("OPENROUTER_API_KEY", "or-key")
 
     endpoints = llm_client._load_endpoints()
-    assert [e.provider for e in endpoints] == ["OPENROUTER", "GROQ", "GEMINI"]
+    assert [e.provider for e in endpoints] == ["OPENROUTER", "GROQ"]
 
 
 def test_per_provider_model_override_is_used(monkeypatch):
@@ -181,10 +181,10 @@ def test_no_keys_configured_raises_helpful_error():
 
 
 @pytest.mark.parametrize("message", [
-    "Rate limit exceeded: free-models-per-day",
-    "Rate limit reached for model on requests per day (RPD)",
-    "Rate limit reached for model on tokens per day (TPD)",
-    "You exceeded your quota: generate_requests_per_model_per_day",
+    "Rate limit exceeded: free-models-per-day",              # OpenRouter
+    "Rate limit reached for model on requests per day (RPD)",  # Groq
+    "Rate limit reached for model on tokens per day (TPD)",    # Groq
+    "You exceeded your quota: generate_requests_per_model_per_day",  # underscore form
 ])
 def test_daily_cap_detection_covers_each_provider_wording(message):
     assert llm_client._is_daily_cap_error(_rate_limit_error(message))
