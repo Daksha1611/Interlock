@@ -46,10 +46,12 @@ Structural guarantees, enforced by `tests/test_isolation.py` (not just asserted 
 cd bounded-recovery
 uv venv && source .venv/bin/activate
 uv pip install -e ".[dev]"
-cp .env.example .env   # fill in OPENROUTER_API_KEY for live-agent runs
+cp .env.example .env   # fill in at least one provider key for live-agent runs
 ```
 
-OpenRouter's free tier is 50 requests/day per account without added credit. `agent/llm_client.py` supports `OPENROUTER_API_KEYS` (comma-separated) instead of a single `OPENROUTER_API_KEY` — it rotates to the next key automatically the moment one hits its daily cap, no interruption to a run in progress.
+Live-agent runs need an LLM. `agent/llm_client.py` takes keys for three providers — OpenRouter, Groq, and Gemini — all of which speak the OpenAI chat-completions format, so one client covers them and only the key, base URL, and model name differ. Endpoints are tried in that order and the client moves to the next one when a provider's free-tier quota is spent, so a long run doesn't stop at the first exhausted tier. Any provider left unset is skipped; each also has a plural `*_API_KEYS` form taking a comma-separated list, for several accounts on the same provider.
+
+This matters because the free tiers are small and very unevenly sized — OpenRouter allows ~50 requests/day per account without added credit, where Groq's is roughly 1000/day per model. Chaining them is what makes a full evaluation run affordable at zero cost.
 
 Generate the corpus (seeded, deterministic — freeze before touching strategies):
 
@@ -70,13 +72,13 @@ python -m pytest tests/ -q
 PYTHONPATH=src python -m eval.report --strategies B0,B1 --data-dir data/corpus --out runs/baselines_report.json
 ```
 
-**Red-team suite** — needs `OPENROUTER_API_KEY`:
+**Red-team suite** — needs at least one provider key:
 ```bash
 PYTHONPATH=src python -m redteam.generator --strategy agent --n-replicates 1 --out runs/redteam_agent_report.json
 PYTHONPATH=src python -m redteam.generator --strategy B0   # free, no network — sanity baseline
 ```
 
-**Three-way comparison including the live agent** — `--limit-orders` keeps this inside a free-tier daily quota (OpenRouter's `:free` tier is 50 requests/day without credit, 1000/day with $10 credit added; the credit itself isn't spent by free models):
+**Three-way comparison including the live agent** — `--limit-orders` caps how much of the day's LLM quota a single run can consume, across whatever providers are configured:
 ```bash
 PYTHONPATH=src python -m eval.report --strategies B0,B1,agent --data-dir data/holdout --limit-orders 20 --out runs/holdout_report.json
 ```
