@@ -135,9 +135,30 @@ Where the agent fell for traps: retrying past an exhausted attempt cap on a dupl
 
 ## What's still open
 
-1. Run the three-way held-out comparison (B0 vs B1 vs agent) at a `--limit-orders` size that fits the day's API budget.
+*Paused 2026-08-23. Working tree clean, `origin/main` in sync, 114 tests passing.*
+
+**1. Re-run the three-way held-out comparison (B0 vs B1 vs agent).** This is the
+only thing blocking the rest.
+
+```bash
+PYTHONPATH=src python -m eval.report --strategies B0,B1,agent \
+  --data-dir data/holdout --out runs/results/holdout_three_way_<date>.json
+```
+
+The 2026-08-23 attempt is void and its report was deleted rather than committed:
+it exhausted Groq's 200k tokens/day ceiling at decision 92 of 202, and every call
+after that became an escalate-on-failure substitution, dragging apparent recovery
+down to 7.3%. Re-run it with **both** providers configured (don't pin to one), on
+a fresh token budget, and check `integrity.metrics_trustworthy` in the output
+before trusting any number. `--limit-orders N` caps the spend.
+
+The B0/B1 halves of that run were valid and are unaffected — 25.3% and 27.3%
+recovery respectively, 0 policy violations each, over 150 held-out orders.
+
 2. Diagnosis confusion matrix and honesty-section writeup from that held-out run.
-3. Final pitch deck pass: framing, live audit-replay demo, recovery table, limitations.
+3. Fill the remaining `[PENDING]` markers in `PITCH.md` (agent's recovery row,
+   honesty/limitations items).
+4. Final pitch deck pass: framing, live audit-replay demo, recovery table, limitations.
 
 ## Design notes worth knowing before the panel
 
