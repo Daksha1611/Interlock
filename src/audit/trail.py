@@ -42,9 +42,12 @@ class AuditTrail:
     def __init__(self, run_id: str, runs_dir: str = "runs"):
         self.run_id = run_id
         self.path = Path(runs_dir) / run_id / "audit.jsonl"
-        self.path.parent.mkdir(parents=True, exist_ok=True)
 
     def append(self, record: DecisionRecord) -> None:
+        # Created on first write, not in __init__: the read endpoints build an
+        # AuditTrail just to look a run up, and a GET for an id that doesn't
+        # exist must not leave a directory behind for it.
+        self.path.parent.mkdir(parents=True, exist_ok=True)
         with open(self.path, "a") as f:
             f.write(json.dumps(asdict(record)) + "\n")
 

@@ -49,3 +49,37 @@ def test_safe_data_dir_rejects_traversal_outside_data():
 def test_safe_data_dir_rejects_absolute_path_outside_project():
     with pytest.raises(HTTPException):
         safe_data_dir("/etc/passwd")
+
+
+def test_reading_a_nonexistent_run_does_not_create_it(tmp_path, monkeypatch):
+    """A GET must not leave a directory behind for an id that doesn't exist —
+    otherwise repeated reads with arbitrary ids grow the runs/ tree without
+    bound."""
+    from audit.trail import AuditTrail
+
+    trail = AuditTrail("never_written_run", runs_dir=str(tmp_path))
+    assert trail.load_all() == []
+    assert trail.get("dec_nope") is None
+    assert not (tmp_path / "never_written_run").exists()
+
+
+def _sample_record():
+    from audit.trail import DecisionRecord
+
+    return DecisionRecord(
+        decision_id="dec_1", run_id="written_run", strategy_name="test", step=0,
+        order_id="o1", payment_id="p1", event={}, context_snapshot={},
+        diagnosis={}, proposed_action={"action_type": "STOP"}, rule_results=[],
+        disposition="ALLOW", disposition_reason="", final_action={"action_type": "STOP"},
+        execution_outcome=None, money_delta=0,
+    )
+
+
+def test_appending_still_creates_the_run_directory(tmp_path):
+    from audit.trail import AuditTrail
+
+    trail = AuditTrail("written_run", runs_dir=str(tmp_path))
+    assert not (tmp_path / "written_run").exists()
+    trail.append(_sample_record())
+    assert (tmp_path / "written_run" / "audit.jsonl").exists()
+    assert len(trail.load_all()) == 1
