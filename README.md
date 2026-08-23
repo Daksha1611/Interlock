@@ -51,7 +51,9 @@ cp .env.example .env   # fill in at least one provider key for live-agent runs
 
 Live-agent runs need an LLM. `agent/llm_client.py` takes keys for two providers — OpenRouter, with Groq as the backup — both of which speak the OpenAI chat-completions format, so one client covers them and only the key, base URL, and model name differ. Endpoints are tried in that order and the client moves to the next one when a provider's free-tier quota is spent, so a long run doesn't stop at the first exhausted tier. Any provider left unset is skipped; each also has a plural `*_API_KEYS` form taking a comma-separated list, for several accounts on the same provider.
 
-This matters because the free tiers are small and very unevenly sized — OpenRouter allows ~50 requests/day per account without added credit, where Groq's is roughly 1000/day per model. Chaining them is what makes a full evaluation run affordable at zero cost.
+This matters because the free tiers are small, unevenly sized, and metered on different things. OpenRouter allows ~50 requests/day per account without added credit. Groq allows ~1000 requests/day per model but also caps **tokens** per day (200,000 on `openai/gpt-oss-20b`), and with a ~2k-token budget per decision it is that token ceiling that binds first — roughly 100–200 decisions/day, not 1000. Budget a live run in tokens rather than requests.
+
+A run that exhausts its quota part-way does not fail loudly: `agent/orchestrator.py` substitutes an ESCALATE for every failed call so the run completes, which silently understates recovery. `eval/metrics.integrity_metrics` counts those substitutions and marks the report untrustworthy past a small threshold — check `integrity.metrics_trustworthy` before believing any recovery number.
 
 Generate the corpus (seeded, deterministic — freeze before touching strategies):
 

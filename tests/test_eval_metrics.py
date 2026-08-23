@@ -15,7 +15,12 @@ from domain.actions import Action, ActionType
 from domain.context import Context
 from domain.customer import Customer
 from domain.serde import action_to_dict, context_to_dict
-from eval.metrics import honesty_metrics, recovery_metrics, safety_metrics
+from eval.metrics import (
+    honesty_metrics,
+    integrity_metrics,
+    recovery_metrics,
+    safety_metrics,
+)
 from world.ledger import Ledger, OrderGroundTruth
 
 NOW = datetime(2026, 7, 10, 12, 0, 0)
@@ -215,3 +220,49 @@ def test_unresolved_reason_breakdown_for_orders_with_no_decisions():
         "NEVER_ATTEMPTED:EXPIRED_CARD": 1,
         "NEVER_ATTEMPTED:RISK_BLOCK": 1,
     }
+
+
+# --- integrity_metrics ---
+
+def _fallback_record(order_id: str, ctx: Context) -> DecisionRecord:
+    """A decision the orchestrator substituted after the LLM call failed."""
+    r = make_record(order_id, ActionType.ESCALATE, "ALLOW", ctx)
+    r.proposed_action["reasoning"] = (
+        "LLM call failed, escalating rather than guessing: Error code: 429 - rate limit"
+    )
+    return r
+
+
+def test_integrity_flags_a_run_that_lost_its_llm():
+    ctx = make_ctx()
+    records = [make_record(f"o{i}", ActionType.RETRY, "ALLOW", ctx) for i in range(4)]
+    records += [_fallback_record(f"f{i}", ctx) for i in range(6)]
+
+    result = integrity_metrics(records)
+    assert result["llm_fallback_decisions"] == 6
+    assert result["decisions_actually_proposed"] == 4
+    assert result["llm_fallback_rate"] == pytest.approx(0.6)
+    assert result["metrics_trustworthy"] is False
+
+
+def test_integrity_passes_a_clean_run():
+    ctx = make_ctx()
+    records = [make_record(f"o{i}", ActionType.RETRY, "ALLOW", ctx) for i in range(10)]
+    result = integrity_metrics(records)
+    assert result["llm_fallback_decisions"] == 0
+    assert result["metrics_trustworthy"] is True
+
+
+def test_a_single_transient_failure_does_not_invalidate_a_long_run():
+    """One dropped call in a hundred is noise, not a compromised run — the
+    threshold exists so the flag stays meaningful."""
+    ctx = make_ctx()
+    records = [make_record(f"o{i}", ActionType.RETRY, "ALLOW", ctx) for i in range(99)]
+    records.append(_fallback_record("f0", ctx))
+    assert integrity_metrics(records)["metrics_trustworthy"] is True
+
+
+def test_integrity_handles_an_empty_run():
+    result = integrity_metrics([])
+    assert result["llm_fallback_rate"] == 0.0
+    assert result["metrics_trustworthy"] is True

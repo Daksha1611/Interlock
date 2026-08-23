@@ -41,6 +41,10 @@ def print_table(reports: list[dict]) -> None:
     for r in reports:
         rec = r["recovery"]
         saf = r["safety"]
+        integ = r.get("integrity", {})
+        # Mark the row itself, so a compromised number is never readable as a
+        # clean result even if the warning below scrolls off.
+        flag = "" if integ.get("metrics_trustworthy", True) else "  << INVALID"
         print(
             f"{r['strategy_name']:<20} "
             f"{rec['recovery_rate']*100:>9.1f}% "
@@ -48,7 +52,24 @@ def print_table(reports: list[dict]) -> None:
             f"{saf['policy_violations']:>11} "
             f"{saf['agent_trap_rate']*100:>6.1f}% "
             f"{saf['gate_intervention_count']:>9}"
+            f"{flag}"
         )
+
+    compromised = [r for r in reports if not r.get("integrity", {}).get("metrics_trustworthy", True)]
+    if compromised:
+        print()
+        print("!" * 78)
+        print("INVALID RUN — the recovery numbers above do NOT describe the strategy.")
+        for r in compromised:
+            i = r["integrity"]
+            print(
+                f"  {r['strategy_name']}: {i['llm_fallback_decisions']}/{i['total_decisions']} decisions "
+                f"({i['llm_fallback_rate']*100:.0f}%) were escalate-on-LLM-failure substitutions "
+                f"rather than proposals; only {i['decisions_actually_proposed']} were actually decided."
+            )
+        print("A failed call escalates, and an escalation recovers nothing, so recovery is")
+        print("understated by however much of the run was lost. Re-run with quota available.")
+        print("!" * 78)
 
 
 _STRATEGY_NAMES = {"B0", "B1", "agent"}

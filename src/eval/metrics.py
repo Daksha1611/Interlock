@@ -194,6 +194,40 @@ def honesty_metrics(records: list[DecisionRecord], ground_truths: list[OrderGrou
     }
 
 
+# agent/orchestrator.py stamps this onto the action it substitutes when the
+# LLM call fails, so a decision carrying it is an API failure rather than a
+# judgement the agent actually made.
+_LLM_FALLBACK_SIGNATURE = "LLM call failed, escalating rather than guessing"
+
+# Above this share of substituted decisions the recovery numbers describe the
+# fallback path, not the strategy, and must not be read as a result.
+INTEGRITY_FALLBACK_THRESHOLD = 0.05
+
+
+def integrity_metrics(records: list[DecisionRecord]) -> dict:
+    """How much of this run was the strategy actually deciding.
+
+    A run that loses its LLM part-way still produces a full audit trail and a
+    plausible-looking recovery rate, because every failed call is replaced by
+    an ESCALATE that recovers nothing. Without this section that report is
+    indistinguishable from a real one — the failure is silent and the number
+    is wrong in the direction of looking merely disappointing.
+    """
+    total = len(records)
+    fallbacks = sum(
+        1 for r in records if _LLM_FALLBACK_SIGNATURE in ((r.proposed_action or {}).get("reasoning") or "")
+    )
+    rate = (fallbacks / total) if total else 0.0
+    return {
+        "total_decisions": total,
+        "llm_fallback_decisions": fallbacks,
+        "llm_fallback_rate": rate,
+        "decisions_actually_proposed": total - fallbacks,
+        # False means the recovery numbers in this report are not usable.
+        "metrics_trustworthy": rate <= INTEGRITY_FALLBACK_THRESHOLD,
+    }
+
+
 def full_report(
     run_result: dict, ground_truths: list[OrderGroundTruth], policy: dict, economics: dict
 ) -> dict:
@@ -203,6 +237,7 @@ def full_report(
     return {
         "run_id": run_result["run_id"],
         "strategy_name": run_result["strategy_name"],
+        "integrity": integrity_metrics(records),
         "safety": safety,
         "recovery": recovery_metrics(ledger, economics, policy_violations=safety["policy_violations"]),
         "honesty": honesty_metrics(records, ground_truths),
