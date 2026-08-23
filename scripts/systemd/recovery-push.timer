@@ -1,0 +1,22 @@
+[Unit]
+Description=Gradual push schedule for Bounded Recovery Engine commits
+
+[Timer]
+OnCalendar=09:12
+OnCalendar=12:27
+OnCalendar=15:42
+OnCalendar=18:57
+OnCalendar=21:12
+
+# The reason this exists instead of a crontab: cron silently skips a
+# scheduled run when the machine is asleep or powered off, and never
+# revisits it. Persistent=true records the last run and replays a single
+# missed one shortly after the machine comes back, so downtime delays the
+# schedule rather than dropping commits out of it.
+Persistent=true
+
+# Jitter so pushes don't land on the same second every day.
+RandomizedDelaySec=420
+
+[Install]
+WantedBy=timers.target

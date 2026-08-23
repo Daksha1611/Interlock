@@ -1,0 +1,12 @@
+[Unit]
+Description=Advance origin/main by one commit (Bounded Recovery Engine)
+Documentation=file:///home/dakshmehta/Downloads/Projects/RecoveryAgent/bounded-recovery/scripts/push_next_commit.sh
+# Don't attempt a push while the machine is offline.
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/dakshmehta/Downloads/Projects/RecoveryAgent/bounded-recovery
+ExecStart=/usr/bin/bash scripts/push_next_commit.sh
+StandardOutput=append:/home/dakshmehta/Downloads/Projects/RecoveryAgent/bounded-recovery/.push_log.txt
+StandardError=append:/home/dakshmehta/Downloads/Projects/RecoveryAgent/bounded-recovery/.push_log.txt
