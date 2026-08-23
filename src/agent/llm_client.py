@@ -68,6 +68,14 @@ def _load_endpoints() -> list[_Endpoint]:
     return endpoints
 
 
+def configured_endpoints() -> list[dict]:
+    """Which provider/model the agent would actually use, in preference
+    order. Recorded into evaluation reports so a result can be tied back to
+    the model that produced it — trap rates are not comparable across
+    models, so a report without this is not reproducible evidence."""
+    return [{"provider": e.provider, "model": e.model} for e in _load_endpoints()]
+
+
 def _client_for(ep: _Endpoint) -> OpenAI:
     cache_key = (ep.base_url, ep.api_key)
     if cache_key not in _clients:

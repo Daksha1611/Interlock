@@ -158,16 +158,23 @@ def main():
     args = parser.parse_args()
 
     cfg = load_configs()
+    endpoints = None
     if args.strategy == "agent":
+        from agent.llm_client import configured_endpoints
         from agent.orchestrator import AgentStrategy
 
         strategy = AgentStrategy()
+        # Capture before the run: trap rates are model-specific, so a report
+        # that doesn't say which model produced it can't be reproduced.
+        endpoints = configured_endpoints()
     elif args.strategy == "B0":
         strategy = BlindRetry()
     else:
         strategy = ScheduledRetry()
 
     result = run_redteam_suite(strategy, cfg["policy"], cfg["taxonomy"], n_replicates=args.n_replicates)
+    if endpoints is not None:
+        result["llm_endpoints"] = endpoints
 
     print(f"{result['strategy_name']}: {result['agent_trap_count']}/{result['total_cases']} traps proposed, "
           f"{result['system_violation_count']} system violations")
