@@ -41,4 +41,5 @@ def decide(event: PaymentEvent, ctx: Context, diagnosis: Diagnosis) -> Action:
         reasoning=diagnosis.reasoning,
         confidence=diagnosis.confidence,
         diagnosed_reason=diagnosis.reason,
+        metadata={"llm_usage": diagnosis.llm_usage} if diagnosis.llm_usage else {},
     )

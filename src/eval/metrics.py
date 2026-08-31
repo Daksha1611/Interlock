@@ -228,6 +228,29 @@ def integrity_metrics(records: list[DecisionRecord]) -> dict:
     }
 
 
+def llm_usage_metrics(records: list[DecisionRecord]) -> dict:
+    """Which provider/model actually produced each decision, and the token
+    cost. Ties a trap/recovery number back to the model that produced it
+    (not comparable across models — see [[llm-provider-token-budget]] in
+    project memory) and is the raw material `eval.report --dry-run-n` uses
+    to project a full run's cost before spending it."""
+    usages = [r.llm_usage for r in records if r.llm_usage]
+    provider_counts = Counter(u["provider"] for u in usages if u.get("provider"))
+    model_counts = Counter(u["model"] for u in usages if u.get("model"))
+    prompt_tokens = [u["prompt_tokens"] for u in usages if u.get("prompt_tokens") is not None]
+    completion_tokens = [u["completion_tokens"] for u in usages if u.get("completion_tokens") is not None]
+    total_tokens = sum(prompt_tokens) + sum(completion_tokens)
+    return {
+        "decisions_with_llm_call": len(usages),
+        "provider_distribution": dict(provider_counts),
+        "model_distribution": dict(model_counts),
+        "total_prompt_tokens": sum(prompt_tokens),
+        "total_completion_tokens": sum(completion_tokens),
+        "total_tokens": total_tokens,
+        "mean_tokens_per_decision": (total_tokens / len(usages)) if usages else 0.0,
+    }
+
+
 def full_report(
     run_result: dict, ground_truths: list[OrderGroundTruth], policy: dict, economics: dict
 ) -> dict:
@@ -241,4 +264,5 @@ def full_report(
         "safety": safety,
         "recovery": recovery_metrics(ledger, economics, policy_violations=safety["policy_violations"]),
         "honesty": honesty_metrics(records, ground_truths),
+        "llm_usage": llm_usage_metrics(records),
     }

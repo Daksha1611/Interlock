@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import httpx2
 import pytest
-from openai import RateLimitError
+from openai import APIError, RateLimitError
 
 from agent import llm_client
 
@@ -41,12 +41,19 @@ def _daily_cap_error() -> RateLimitError:
     return _rate_limit_error("Rate limit exceeded: free-models-per-day")
 
 
-def _make_response(payload: dict) -> MagicMock:
+def _rate_limit_error_with_headers(message: str, headers: dict) -> RateLimitError:
+    req = httpx2.Request("POST", "https://example.invalid/chat/completions")
+    resp = httpx2.Response(429, request=req, headers=headers)
+    return RateLimitError(message, response=resp, body=None)
+
+
+def _make_response(payload: dict, prompt_tokens: int = 42, completion_tokens: int = 7) -> MagicMock:
     message = MagicMock()
     message.content = json.dumps(payload)
     message.reasoning = None
     response = MagicMock()
     response.choices = [MagicMock(message=message)]
+    response.usage = MagicMock(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens)
     return response
 
 
@@ -73,9 +80,10 @@ def test_single_key_success(monkeypatch):
 
     with patch("agent.llm_client.OpenAI") as MockOpenAI:
         MockOpenAI.return_value.chat.completions.create.return_value = _make_response({"x": 1})
-        result = llm_client.chat_json("sys", "user")
+        result, meta = llm_client.chat_json("sys", "user")
 
     assert result == {"x": 1}
+    assert meta == {"provider": "OPENROUTER", "model": "openrouter/free", "prompt_tokens": 42, "completion_tokens": 7}
     MockOpenAI.assert_called_once_with(api_key="key-a", base_url="https://openrouter.ai/api/v1")
 
 
@@ -84,9 +92,10 @@ def test_rotates_to_next_key_on_daily_cap(monkeypatch):
 
     call_log: list = []
     with patch("agent.llm_client.OpenAI", side_effect=_fake_openai_factory(call_log, {"key-a": _daily_cap_error})):
-        result = llm_client.chat_json("sys", "user")
+        result, meta = llm_client.chat_json("sys", "user")
 
     assert result == {"ok": True}
+    assert meta["provider"] == "OPENROUTER"
     assert [k for k, _ in call_log] == ["key-a", "key-b"]
 
 
@@ -98,9 +107,10 @@ def test_falls_through_to_next_provider_when_first_is_capped(monkeypatch):
 
     call_log: list = []
     with patch("agent.llm_client.OpenAI", side_effect=_fake_openai_factory(call_log, {"or-key": _daily_cap_error})):
-        result = llm_client.chat_json("sys", "user")
+        result, meta = llm_client.chat_json("sys", "user")
 
     assert result == {"ok": True}
+    assert meta["provider"] == "GROQ"
     assert call_log == [("or-key", "openrouter/free"), ("groq-key", "openai/gpt-oss-20b")]
 
 
@@ -192,3 +202,76 @@ def test_daily_cap_detection_covers_each_provider_wording(message):
 
 def test_transient_rate_limit_is_not_treated_as_daily_cap():
     assert not llm_client._is_daily_cap_error(_rate_limit_error("Rate limit reached, please slow down"))
+
+
+# --- rotation semantics: the three failure shapes 1c distinguishes ---------
+
+
+def test_quota_exhausted_rotates_away_permanently(monkeypatch):
+    """Daily cap: the endpoint is dropped for the rest of this call, not
+    retried, since no amount of waiting inside one call refills it."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "or-key")
+    monkeypatch.setenv("GROQ_API_KEY", "groq-key")
+
+    call_log: list = []
+    with patch("agent.llm_client.OpenAI", side_effect=_fake_openai_factory(call_log, {"or-key": _daily_cap_error})):
+        result, meta = llm_client.chat_json("sys", "user")
+
+    assert result == {"ok": True}
+    assert meta["provider"] == "GROQ"
+    assert [k for k, _ in call_log] == ["or-key", "groq-key"]  # or-key tried exactly once, never again
+
+
+def test_rate_limited_backs_off_and_retries_same_provider(monkeypatch):
+    """A transient 429 (not a daily cap) must retry the SAME endpoint after
+    backing off, using the provider's Retry-After header when it sends one
+    — rotating away would abandon an endpoint that works again in seconds."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "or-key")
+    monkeypatch.setenv("GROQ_API_KEY", "groq-key")  # present but must be untouched
+
+    transient = _rate_limit_error_with_headers("Rate limit reached, please slow down", {"retry-after": "0"})
+
+    call_log: list = []
+    calls = {"n": 0}
+
+    def fake_openai(api_key, base_url):
+        client = MagicMock()
+
+        def create(**kwargs):
+            call_log.append((api_key, kwargs["model"]))
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise transient
+            return _make_response({"ok": True})
+
+        client.chat.completions.create.side_effect = create
+        return client
+
+    with patch("agent.llm_client.OpenAI", side_effect=fake_openai), patch("agent.llm_client.time.sleep") as mock_sleep:
+        result, meta = llm_client.chat_json("sys", "user")
+
+    assert result == {"ok": True}
+    assert meta["provider"] == "OPENROUTER"
+    assert [k for k, _ in call_log] == ["or-key", "or-key"]  # retried the SAME provider, never touched groq-key
+    mock_sleep.assert_called_once_with(0.0)  # honored Retry-After rather than guessing a backoff
+
+
+def test_hard_error_rotates_to_next_endpoint(monkeypatch):
+    """A hard API error (not a rate limit) rotates to the next endpoint
+    rather than retrying the one that just failed."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "or-key")
+    monkeypatch.setenv("GROQ_API_KEY", "groq-key")
+
+    def hard_error():
+        return APIError("internal server error", request=httpx2.Request("POST", "https://example.invalid"), body=None)
+
+    call_log: list = []
+    with (
+        patch("agent.llm_client.OpenAI", side_effect=_fake_openai_factory(call_log, {"or-key": hard_error})),
+        patch("agent.llm_client.time.sleep"),
+    ):
+        result, meta = llm_client.chat_json("sys", "user")
+
+    assert result == {"ok": True}
+    assert meta["provider"] == "GROQ"
+    assert [k for k, _ in call_log] == ["or-key", "groq-key"]

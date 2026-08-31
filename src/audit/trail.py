@@ -33,6 +33,11 @@ class DecisionRecord:
     execution_outcome: dict | None # from gate.executor.execute(), None if nothing executed
     money_delta: int               # paise moved as a result of this decision (0 if none)
 
+    # {"provider", "model", "prompt_tokens", "completion_tokens"} when the
+    # proposal came from an LLM call; None for baselines and for the
+    # escalate-on-failure substitution (no call succeeded to attribute).
+    llm_usage: dict | None = None
+
     recorded_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 

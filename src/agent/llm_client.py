@@ -39,6 +39,11 @@ class _Endpoint:
 _PROVIDERS = (
     ("OPENROUTER", "https://openrouter.ai/api/v1", "openrouter/free"),
     ("GROQ", "https://api.groq.com/openai/v1", "openai/gpt-oss-20b"),
+    # Verified reachable via Google's OpenAI-compatibility endpoint (single
+    # live call, 2026-08-31): gemini-2.5-flash is retired for new callers,
+    # gemini-3.6-flash responds 200 with a normal usage block. Not wired
+    # into .env — see .env.example for why.
+    ("GOOGLE", "https://generativelanguage.googleapis.com/v1beta/openai", "gemini-3.6-flash"),
 )
 
 _clients: dict[tuple[str, str], OpenAI] = {}
@@ -115,13 +120,46 @@ def _extract_json(text: str) -> dict:
     raise ValueError(f"could not extract JSON from model output: {text[:300]!r}")
 
 
-def chat_json(system: str, user: str, max_tokens: int = 700, max_retries: int = 4) -> dict:
-    """Call the model, expecting a single JSON object back.
+def _retry_after_seconds(e: RateLimitError) -> float | None:
+    """Prefer the provider's own Retry-After header over a guessed backoff —
+    it's a direct answer to "how long until this endpoint works again"
+    rather than an approximation of it."""
+    response = getattr(e, "response", None)
+    header = response.headers.get("retry-after") if response is not None else None
+    if header is None:
+        return None
+    try:
+        return float(header)
+    except ValueError:
+        return None
 
-    A per-day quota error moves straight to the next endpoint (waiting can't
-    refill a daily quota). A per-minute limit also moves on first, since a
-    different provider's minute budget is independent; only once every
-    endpoint is rate-limited in the same lap does it back off and sleep.
+
+def _usage_meta(ep: _Endpoint, response) -> dict:
+    usage = getattr(response, "usage", None)
+    return {
+        "provider": ep.provider,
+        "model": ep.model,
+        "prompt_tokens": getattr(usage, "prompt_tokens", None) if usage is not None else None,
+        "completion_tokens": getattr(usage, "completion_tokens", None) if usage is not None else None,
+    }
+
+
+def chat_json(system: str, user: str, max_tokens: int = 700, max_retries: int = 4) -> tuple[dict, dict]:
+    """Call the model, expecting a single JSON object back. Returns
+    `(parsed_json, usage_meta)` — the second element records which
+    provider/model actually answered and how many tokens it cost, so a
+    caller can attribute spend instead of it disappearing into the call.
+
+    Three failure shapes, handled differently:
+    - daily quota exhausted: no amount of waiting inside this call refills
+      it, so the endpoint is dropped for the rest of the call (permanent
+      rotation).
+    - transient rate limit (a per-minute ceiling): the SAME endpoint is
+      retried after backing off — rotating away would abandon an endpoint
+      that will work again in seconds, wasting a healthy one's budget for
+      nothing gained.
+    - a hard error (network, 5xx, malformed output): rotate to the next
+      endpoint, since retrying the same one is unlikely to fare better.
     """
     endpoints = _load_endpoints()
     n = len(endpoints)
@@ -130,7 +168,6 @@ def chat_json(system: str, user: str, max_tokens: int = 700, max_retries: int = 
 
     last_err: Exception | None = None
     backoff_step = 0
-    rate_limited_streak = 0
     capped: set[int] = set()
 
     for _ in range(max_total_attempts):
@@ -149,29 +186,31 @@ def chat_json(system: str, user: str, max_tokens: int = 700, max_retries: int = 
                 ],
             )
             _current_endpoint_idx[0] = slot  # remember what worked for the next call
+            meta = _usage_meta(ep, response)
             message = response.choices[0].message
             content = message.content or ""
             try:
-                return _extract_json(content)
+                return _extract_json(content), meta
             except ValueError:
                 # Some reasoning models write the answer into a separate
                 # `reasoning` field when they run long — fall back to it
                 # before giving up and retrying.
                 reasoning = getattr(message, "reasoning", None) or ""
-                return _extract_json(reasoning)
+                return _extract_json(reasoning), meta
         except RateLimitError as e:
             last_err = e
             if _is_daily_cap_error(e):
                 capped.add(slot)
                 if len(capped) == n:
                     break  # every endpoint is out of daily quota
+                idx += 1
             else:
-                rate_limited_streak += 1
-                if rate_limited_streak >= n - len(capped):
-                    time.sleep(min(2**backoff_step * 2, 30))
-                    backoff_step += 1
-                    rate_limited_streak = 0
-            idx += 1
+                # transient: back off and retry this SAME slot, not the next
+                wait = _retry_after_seconds(e)
+                if wait is None:
+                    wait = min(2**backoff_step * 2, 30)
+                time.sleep(wait)
+                backoff_step += 1
         except APIError as e:
             last_err = e
             time.sleep(min(2**backoff_step, 10))

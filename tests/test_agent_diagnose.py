@@ -20,7 +20,8 @@ CTX = Context(now=datetime(2026, 7, 1, 1), customer=Customer(customer_id="c1", n
 def _diagnose_with(raw: dict):
     from agent.diagnose import diagnose
 
-    with patch("agent.diagnose.chat_json", return_value=raw):
+    usage = {"provider": "OPENROUTER", "model": "openrouter/free", "prompt_tokens": 10, "completion_tokens": 5}
+    with patch("agent.diagnose.chat_json", return_value=(raw, usage)):
         return diagnose(EVENT, CTX)
 
 
@@ -73,3 +74,10 @@ def test_confidence_clamped_to_unit_interval():
 def test_malformed_confidence_defaults_to_zero():
     d = _diagnose_with({"diagnosed_reason": "GATEWAY_TIMEOUT", "recommended_action": "STOP", "confidence": "high"})
     assert d.confidence == 0.0
+
+
+def test_llm_usage_is_carried_through_from_chat_json():
+    d = _diagnose_with({"diagnosed_reason": "GATEWAY_TIMEOUT", "recommended_action": "STOP"})
+    assert d.llm_usage == {
+        "provider": "OPENROUTER", "model": "openrouter/free", "prompt_tokens": 10, "completion_tokens": 5,
+    }

@@ -35,6 +35,7 @@ class Diagnosis:
     recommended_rail: str | None
     recommended_message: str | None
     recommended_delay_hours: float
+    llm_usage: dict | None = None  # provider/model/prompt_tokens/completion_tokens
 
 
 def _build_user_prompt(event: PaymentEvent, ctx: Context) -> str:
@@ -70,7 +71,7 @@ def _build_user_prompt(event: PaymentEvent, ctx: Context) -> str:
 
 def diagnose(event: PaymentEvent, ctx: Context) -> Diagnosis:
     user_prompt = _build_user_prompt(event, ctx)
-    raw = chat_json(_SYSTEM_PROMPT, user_prompt, max_tokens=2000)
+    raw, usage = chat_json(_SYSTEM_PROMPT, user_prompt, max_tokens=2000)
 
     reason = str(raw.get("diagnosed_reason", "")).strip().upper()
     if reason not in VALID_REASONS:
@@ -120,4 +121,5 @@ def diagnose(event: PaymentEvent, ctx: Context) -> Diagnosis:
         recommended_rail=recommended_rail,
         recommended_message=recommended_message,
         recommended_delay_hours=delay,
+        llm_usage=usage,
     )

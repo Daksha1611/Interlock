@@ -114,6 +114,7 @@ def run_strategy(
                 final_action=action_to_dict(decision.final_action) if decision.final_action else None,
                 execution_outcome=exec_outcome,
                 money_delta=exec_outcome["money_delta"] if exec_outcome else 0,
+                llm_usage=proposed.metadata.get("llm_usage"),
             )
             audit.append(record)
             nonlocal n_decisions

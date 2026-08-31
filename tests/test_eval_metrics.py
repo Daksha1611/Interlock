@@ -18,6 +18,7 @@ from domain.serde import action_to_dict, context_to_dict
 from eval.metrics import (
     honesty_metrics,
     integrity_metrics,
+    llm_usage_metrics,
     recovery_metrics,
     safety_metrics,
 )
@@ -42,6 +43,7 @@ def make_record(
     ctx: Context,
     diagnosed_reason: str | None = "GATEWAY_TIMEOUT",
     step: int = 0,
+    llm_usage: dict | None = None,
 ) -> DecisionRecord:
     action = Action(
         action_type=action_type, payment_id=f"pay_{order_id}", order_id=order_id,
@@ -54,7 +56,7 @@ def make_record(
         diagnosis={"reason": diagnosed_reason, "confidence": 0.9, "reasoning": ""},
         proposed_action=action_to_dict(action),
         rule_results=[], disposition=disposition, disposition_reason="", final_action=action_to_dict(action),
-        execution_outcome=None, money_delta=0,
+        execution_outcome=None, money_delta=0, llm_usage=llm_usage,
     )
 
 
@@ -266,3 +268,33 @@ def test_integrity_handles_an_empty_run():
     result = integrity_metrics([])
     assert result["llm_fallback_rate"] == 0.0
     assert result["metrics_trustworthy"] is True
+
+
+# --- llm_usage_metrics ---
+
+
+def test_llm_usage_metrics_aggregates_provider_and_token_counts():
+    ctx = make_ctx()
+    records = [
+        make_record("o1", ActionType.RETRY, "ALLOW", ctx, llm_usage={
+            "provider": "GROQ", "model": "openai/gpt-oss-20b", "prompt_tokens": 100, "completion_tokens": 50,
+        }),
+        make_record("o2", ActionType.RETRY, "ALLOW", ctx, step=1, llm_usage={
+            "provider": "GROQ", "model": "openai/gpt-oss-20b", "prompt_tokens": 200, "completion_tokens": 50,
+        }),
+        make_record("o3", ActionType.RETRY, "ALLOW", ctx, step=2),  # baseline decision, no LLM call
+    ]
+    result = llm_usage_metrics(records)
+    assert result["decisions_with_llm_call"] == 2
+    assert result["provider_distribution"] == {"GROQ": 2}
+    assert result["model_distribution"] == {"openai/gpt-oss-20b": 2}
+    assert result["total_tokens"] == 400
+    assert result["mean_tokens_per_decision"] == pytest.approx(200.0)
+
+
+def test_llm_usage_metrics_handles_no_llm_calls():
+    ctx = make_ctx()
+    records = [make_record("o1", ActionType.RETRY, "ALLOW", ctx)]
+    result = llm_usage_metrics(records)
+    assert result["decisions_with_llm_call"] == 0
+    assert result["mean_tokens_per_decision"] == 0.0
