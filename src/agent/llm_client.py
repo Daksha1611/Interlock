@@ -187,7 +187,16 @@ def chat_json(system: str, user: str, max_tokens: int = 700, max_retries: int = 
             )
             _current_endpoint_idx[0] = slot  # remember what worked for the next call
             meta = _usage_meta(ep, response)
-            message = response.choices[0].message
+            choices = getattr(response, "choices", None)
+            if not choices:
+                # Observed live on OpenRouter's free auto-router: an
+                # otherwise-200 response with choices=None. Left unguarded
+                # this raises an unhandled TypeError that skips every
+                # rotation branch below and kills the whole call outright —
+                # exactly the kind of malformed-output case a hard error
+                # should be, not a crash.
+                raise ValueError(f"{ep.provider} returned a response with no choices")
+            message = choices[0].message
             content = message.content or ""
             try:
                 return _extract_json(content), meta
@@ -211,14 +220,14 @@ def chat_json(system: str, user: str, max_tokens: int = 700, max_retries: int = 
                     wait = min(2**backoff_step * 2, 30)
                 time.sleep(wait)
                 backoff_step += 1
-        except APIError as e:
+        except (APIError, ValueError, json.JSONDecodeError) as e:
+            # Hard error: network/5xx, a malformed response, or output that
+            # never parsed as JSON even from the reasoning fallback. Retrying
+            # the same endpoint is unlikely to fare better, so rotate.
             last_err = e
             time.sleep(min(2**backoff_step, 10))
             backoff_step += 1
             idx += 1
-        except (ValueError, json.JSONDecodeError) as e:
-            last_err = e
-            time.sleep(1)
 
     raise RuntimeError(
         f"LLM call failed across {n} endpoint(s) "

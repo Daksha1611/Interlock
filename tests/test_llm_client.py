@@ -15,6 +15,7 @@ from agent import llm_client
 ALL_KEY_VARS = [
     "OPENROUTER_API_KEY", "OPENROUTER_API_KEYS",
     "GROQ_API_KEY", "GROQ_API_KEYS",
+    "GOOGLE_API_KEY", "GOOGLE_API_KEYS",
 ]
 
 
@@ -254,6 +255,40 @@ def test_rate_limited_backs_off_and_retries_same_provider(monkeypatch):
     assert meta["provider"] == "OPENROUTER"
     assert [k for k, _ in call_log] == ["or-key", "or-key"]  # retried the SAME provider, never touched groq-key
     mock_sleep.assert_called_once_with(0.0)  # honored Retry-After rather than guessing a backoff
+
+
+def test_malformed_response_with_no_choices_rotates_instead_of_crashing(monkeypatch):
+    """Regression test: OpenRouter's free auto-router was observed live
+    (2026-08-31 holdout run) returning an otherwise-200 response with
+    choices=None. Unguarded, `response.choices[0]` raised an unhandled
+    TypeError that skipped every rotation branch and killed the whole call
+    — 17/159 decisions in that run fell back to ESCALATE while Groq sat
+    completely unused with full headroom. Must rotate like any other hard
+    error instead."""
+    monkeypatch.setenv("OPENROUTER_API_KEY", "or-key")
+    monkeypatch.setenv("GROQ_API_KEY", "groq-key")
+
+    def fake_openai(api_key, base_url):
+        client = MagicMock()
+
+        def create(**kwargs):
+            call_log.append((api_key, kwargs["model"]))
+            if api_key == "or-key":
+                response = MagicMock()
+                response.choices = None
+                return response
+            return _make_response({"ok": True})
+
+        client.chat.completions.create.side_effect = create
+        return client
+
+    call_log: list = []
+    with patch("agent.llm_client.OpenAI", side_effect=fake_openai), patch("agent.llm_client.time.sleep"):
+        result, meta = llm_client.chat_json("sys", "user")
+
+    assert result == {"ok": True}
+    assert meta["provider"] == "GROQ"
+    assert [k for k, _ in call_log] == ["or-key", "groq-key"]
 
 
 def test_hard_error_rotates_to_next_endpoint(monkeypatch):
