@@ -112,10 +112,23 @@ All three replay to the identical disposition, recomputed from the logged contex
 
 > "Safety that costs all the revenue isn't a result."
 
-**Held-out set, 150 orders, never used for tuning — inspected once:**
+**Held-out set, 150 orders, never used for tuning — inspected once.**
 
-| strategy | recovery rate | net recovered (₹) | policy violations | gate interventions |
-|---|---|---|---|---|
+Start with the like-for-like comparison, because it is the one that isn't confounded.
+All three strategies have RETRY. Same action, same gate, same corpus:
+
+| | retries executed | recovered | hit rate |
+|---|---|---|---|
+| B0 (blind retry) | 214 | 38 | **18%** |
+| B1 (scheduled retry) | 191 | 24 | **13%** |
+| **agent (LLM)** | 126 | 45 | **36%** |
+
+> "On the one action all three share, the agent is roughly two to three times better at
+> judging when a retry is worth spending. That's not a bigger toolbox — it's the same
+> tool, used better."
+
+Now the totals, which include an action the baselines don't have:
+
 | strategy | recovery rate | net recovered (₹) | policy violations | attempts | gate interventions |
 |---|---|---|---|---|---|
 | B0 (blind retry) | 25.3% | 54,200 | **0** | 116 | 98 |
@@ -125,30 +138,23 @@ All three replay to the identical disposition, recomputed from the logged contex
 *315 agent decisions, 0 LLM-failure substitutions, `metrics_trustworthy: true`. Model
 mix recorded in the report: 305 OpenRouter, 10 Groq, 412,479 tokens.*
 
-> "46% against B1's 27%, zero violations. But the number I'd actually defend is the
-> one next to it: **110 attempts. Fewer than either baseline.** B1 spent 181 attempts
-> to recover 41 orders; the agent spent 110 to recover 69. It isn't winning by doing
-> more, it's winning by choosing better — ₹912 recovered per attempt against B1's
-> ₹372."
+> "46% against 27%, zero violations, on **fewer attempts than either baseline** — 110
+> against B1's 181. ₹912 recovered per attempt against ₹372."
 
-Where the gap actually comes from, because "the LLM is smarter" is not an answer:
+The obvious objection is that the agent has a wider action space: B0 only proposes
+RETRY, B1 proposes RETRY and NUDGE, and neither ever proposes SWITCH_RAIL. So we
+decomposed the ₹33,072 gross gain over B1 rather than leave it to be asked:
 
-| | retry hit rate | uses SWITCH_RAIL | recoveries |
+| action | Δ recoveries | Δ value | share of gain |
 |---|---|---|---|
-| B0 | 38/214 — **18%** | no | 38 |
-| B1 | 24/191 — **13%** | no | 41 |
-| agent | 45/126 — **36%** | **yes** — 43 proposals, 5 recoveries | 69 |
+| RETRY (both have it) | +21 | **+₹38,942** | **118%** |
+| SWITCH_RAIL (agent only) | +5 | +₹9,137 | 28% |
+| NUDGE (both have it) | +2 | **−₹15,007** | **−45%** |
 
-Two distinct effects, and only one of them is to our credit:
-
-1. **The agent targets retries roughly 2–3× better.** Same action, same gate, same
-   corpus — it is materially better at judging *when* a retry is worth spending.
-2. **It uses an action the baselines structurally cannot.** B0 only ever proposes
-   RETRY; B1 proposes RETRY and NUDGE. Neither ever proposes SWITCH_RAIL. So part of
-   this gap is a wider action space, not better judgement — and we should say so
-   before someone asks. A rules-based strategy with access to all five action types
-   would be a harder opponent than either baseline here, which is exactly why the
-   uplift baseline in future work is the comparison we most want to see run.
+> "The wider action space is worth about a quarter of the gain. The like-for-like
+> retry advantage is worth more than all of it. And on nudges — which both strategies
+> have — B1 actually beats us by fifteen thousand rupees. We're not better across the
+> board; we're much better at one thing and slightly worse at another."
 
 **Severity, not a binary count** (after ToolEmu, Ruan et al., ICLR 2024). A single "violations" number treats "charged a customer twice" and "texted them at 22:00" as the same event:
 
@@ -227,6 +233,13 @@ Said before anyone has to ask:
 
 - **The adversarial suite is in-sample.** Two invariants — `hard_decline_no_retry` and the extended `risk_block` — were *derived* from red-teaming the baselines against this same suite. The gate is partly fitted to these scenarios. It doesn't touch the structural claim, but the trap rates should be read as in-sample, not as generalisation.
 - **Replicates are not coverage.** 100 decisions is 10 families seen 10 times, measuring model variance on fixed setups. The confidence interval on any single family's trap rate is wide.
+- **The entire recovery lift is conditional on a simulated outcome model we wrote, and would need refitting before anyone believed it.** Whether a retry succeeds is decided by curves in `config/taxonomy.yaml` — a `sigmoid_time` with `peak_prob: 0.55` at a 48-hour midpoint, `nudge_recovery_prob` values of 0.25–0.45, a flat `contact_lift: 0.10`. Those are numbers we specified, not measured from production traffic.
+
+  This matters more than a generic "it's a simulation" caveat, because of *where* our advantage lands. The agent's retries that follow no prior nudge succeed at **55%**, against B1's 13% — and `peak_prob` in that config file is **0.55**. What we are substantially measuring is whether an LLM can find the peak of a curve we hand-specified. That is a real skill, and it is a much narrower claim than "recovers 46% of failed payments."
+
+  Two things follow, and we'd say both unprompted. Real recovery curves vary by issuer, rail, amount band, and time of day, and are precisely what Razorpay already optimises with vastly more data than we have — so a like-for-like production lift is not something this experiment can support. And SWITCH_RAIL's curves are the least constrained of all, because neither baseline ever exercises them, so nothing in this evaluation cross-checks them.
+
+  **We are not defending the 46%.** The thesis is that an LLM can hold authority over money and be structurally incapable of misusing it. The recovery number exists only to show that safety didn't cost everything — and for that purpose, a number that needs refitting is sufficient, so we'd rather state the limit plainly than defend a figure the thesis doesn't rest on.
 - **The diagnosis metric is degenerate here** — covered in beat 6. Short version: the reason code equals ground truth 150/150, so the metric measures signal corruption, not diagnostic skill. On the held-out run the agent was confidently wrong exactly **once in 147 diagnoses**
 — `dec_4748702490d5`, a `GATEWAY_TIMEOUT` on a UPI payment read as `UPI_TIMEOUT` at
 0.82 confidence.
