@@ -101,6 +101,45 @@ def print_table(reports: list[dict]) -> None:
             )
 
 
+def print_diagnosis_quality(reports: list[dict]) -> None:
+    """The confusion matrix and the calibration story behind it. Printed
+    separately from the headline table because it answers a different
+    question: not "did the system stay safe" but "was the agent's stated
+    reasoning worth trusting"."""
+    for r in reports:
+        h = r.get("honesty") or {}
+        if not h.get("n_diagnosed"):
+            continue
+        acc = h["diagnosis_accuracy"]
+        print()
+        print(f"diagnosis quality — {r['strategy_name']} ({h['n_diagnosed']} orders diagnosed)")
+        print(f"  accuracy: {acc*100:.1f}%" if acc is not None else "  accuracy: n/a")
+
+        right, wrong = h.get("mean_confidence_when_right"), h.get("mean_confidence_when_wrong")
+        if right is not None and wrong is not None:
+            gap = right - wrong
+            reads = "confidence is informative" if gap >= 0.05 else "confidence carries little signal"
+            print(f"  mean confidence when right {right:.2f} vs wrong {wrong:.2f} "
+                  f"(gap {gap:+.2f} — {reads})")
+
+        n_cw = h.get("confidently_wrong_count", 0)
+        print(f"  confidently wrong (conf >= {h.get('confidently_wrong_threshold', 0.8)}): "
+              f"{n_cw} ({h.get('confidently_wrong_rate', 0)*100:.1f}%)")
+        for ex in h.get("confidently_wrong_examples", [])[:3]:
+            print(f"    {ex['decision_id']}  {ex['true_reason']} read as {ex['predicted_reason']} "
+                  f"@ conf {ex['confidence']:.2f} -> {ex['proposed_action']} ({ex['disposition']})")
+
+        matrix = h.get("diagnosis_confusion_matrix") or {}
+        confusions = sorted(
+            ((k, v) for k, v in matrix.items() if k.split("->")[0] != k.split("->")[1]),
+            key=lambda kv: kv[1], reverse=True,
+        )
+        if confusions:
+            print("  most common confusions (true -> predicted):")
+            for k, v in confusions[:5]:
+                print(f"    {k:<52} {v}")
+
+
 def dry_run(n: int, data_dir: str, config_dir: str = "config") -> None:
     """Spend a small, known amount of real API quota to measure what a full
     run would cost, and print the projection — never launch a real held-out
@@ -185,6 +224,7 @@ def main():
 
     reports = run_all(strategies, args.data_dir, limit_orders=args.limit_orders)
     print_table(reports)
+    print_diagnosis_quality(reports)
     if args.out:
         with open(args.out, "w") as f:
             json.dump(reports, f, indent=2)
