@@ -12,7 +12,7 @@ The submission's claim, in order:
 3. Recovery performance stays competitive against controlled baselines — safety doesn't eat all the revenue.
 4. Failures are disclosed and categorised, not hidden.
 
-Full spec: see the original project document (not checked in here — ask the author).
+Full spec: [`docs/SPEC-as-designed.md`](docs/SPEC-as-designed.md) — the pre-build design document, checked in unchanged, with a **What changed, and why** section accounting for every place the build diverged from it. This README describes current state; where the two differ, the spec's delta section explains which evidence moved the design.
 
 ## Architecture
 
@@ -153,8 +153,7 @@ Where the agent fell for traps: retrying past an exhausted attempt cap on a dupl
    run so the two don't compete for the same daily quota.
 3. **B2 uplift baseline** (T-learner / X-learner over logged exploration data,
    zero LLM cost) — optional, only if there's time after the above.
-4. **The project spec is not checked in.** A reviewer can't "ask the author", so
-   this needs the original document added to the repo.
+4. ~~The project spec is not checked in.~~ Done — `docs/SPEC-as-designed.md`.
 
 ## Design notes worth knowing before the panel
 
