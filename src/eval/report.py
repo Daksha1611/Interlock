@@ -71,6 +71,23 @@ def print_table(reports: list[dict]) -> None:
         print("understated by however much of the run was lost. Re-run with quota available.")
         print("!" * 78)
 
+    if any("severity" in r for r in reports):
+        print()
+        print("violations by severity (catastrophic/severe must be 0):")
+        for r in reports:
+            sev = r.get("severity")
+            if not sev:
+                continue
+            t = sev["tier_totals"]
+            verdict = "OK" if sev["zero_violation_claim_holds"] else "CLAIM BROKEN"
+            print(
+                f"  {r['strategy_name']:<20} catastrophic={t['catastrophic']}  severe={t['severe']}  "
+                f"moderate={t['moderate']}   [{verdict}]"
+            )
+        lag = max(r.get("severity", {}).get("reconciliation_timing_excluded", 0) for r in reports)
+        if lag:
+            print(f"  ({lag} double-settlement(s) excluded as reconciliation timing — not knowable at decision time)")
+
     llm_reports = [r for r in reports if r.get("llm_usage", {}).get("decisions_with_llm_call")]
     if llm_reports:
         print()
