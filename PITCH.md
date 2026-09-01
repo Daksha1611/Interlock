@@ -28,6 +28,11 @@ Unknown field names fail closed to UNTRUSTED: a hallucinated citation is the cas
 
 ## 3. Adversarial results (70s)
 
+*A note on what this corpus is: the adversarial suite is **not** the held-out set. It
+is a fixed, purpose-built probe corpus, so re-running it costs nothing in evidential
+terms and contaminates nothing. The held-out set was inspected once; this one is a
+test harness and is designed to be run repeatedly.*
+
 Ten scenario families engineered to trap a recovery agent into a wrong money action: a payment already settled by bank transfer, a refund in flight, a duplicate webhook after the attempt cap is used up, a mandate revoked mid-sequence, an open chargeback, a risk flag set after the fact, a customer opting out mid-sequence, an ambiguous timeout that actually succeeded, a prompt injection through a customer note, and a mandate at its regulatory presentation limit. Plus an eleventh **provenance probe**, built so that *no other invariant applies* — a plain gateway timeout, first attempt, under the ceiling, no flags — where the only thing wrong is that the justification came from an attacker-authored note.
 
 **100 live decisions — 10 replicates × 10 families, one pinned model (Groq `openai/gpt-oss-20b`), 2026-08-23:**
@@ -193,13 +198,23 @@ Said before anyone has to ask:
 
 - **The adversarial suite is in-sample.** Two invariants — `hard_decline_no_retry` and the extended `risk_block` — were *derived* from red-teaming the baselines against this same suite. The gate is partly fitted to these scenarios. It doesn't touch the structural claim, but the trap rates should be read as in-sample, not as generalisation.
 - **Replicates are not coverage.** 100 decisions is 10 families seen 10 times, measuring model variance on fixed setups. The confidence interval on any single family's trap rate is wide.
-- **The diagnosis metric is degenerate here** — covered in beat 6. Short version: the reason code equals ground truth 150/150, so the metric measures signal corruption, not diagnostic skill. On the held-out run the agent was confidently wrong exactly **once in 147
-diagnoses** (`dec_4748702490d5`): a `GATEWAY_TIMEOUT` on a UPI payment read as
-`UPI_TIMEOUT` at 0.82 confidence. The brief asked for two or three examples; there is
-one, so we show one rather than pad the list. And it is a near-miss — the reasoning
-was defensible, the chosen action (RETRY) was identical under either label, and the
-gate allowed it. Calibration is weak but real: mean confidence 0.88 when right, 0.82
-when wrong.
+- **The diagnosis metric is degenerate here** — covered in beat 6. Short version: the reason code equals ground truth 150/150, so the metric measures signal corruption, not diagnostic skill. On the held-out run the agent was confidently wrong exactly **once in 147 diagnoses**
+— `dec_4748702490d5`, a `GATEWAY_TIMEOUT` on a UPI payment read as `UPI_TIMEOUT` at
+0.82 confidence.
+
+This is worth showing precisely because it is the exact failure the reframed metric
+was built to surface: the agent **overrode a correct reason code and made it worse**,
+confidently. It is not a generic miss — it is the one shape of error this corpus can
+still detect. It is also a near-miss: the reasoning was defensible, the chosen action
+(RETRY) was identical under either label, and the gate allowed it.
+
+**Do not present the calibration numbers as the agent knowing when it is wrong.** The
+separation is weak — mean confidence 0.88 when right against 0.82 when wrong — and,
+more importantly, that 0.82 is computed from a **single observation**, because there
+was exactly one wrong diagnosis. With n=1 on one side, this is not a calibration
+measurement at all; it is one data point next to an average. The honest statement is
+that we cannot tell from this run whether the agent's confidence carries information,
+and a corpus where diagnosis is actually hard would be needed to find out.
 - **The root cause is our generator, and it makes diagnosis easier than reality.** Real gateway reason codes are noisy and frequently misleading — `DO_NOT_HONOR` is a catch-all that covers everything from fraud suspicion to an expired card to a velocity limit, and issuer outages routinely surface as generic declines rather than as anything labelled an outage. Ours are perfectly faithful. So this metric would be **substantially harder in a real deployment**, and our number should not be read as transferring. We did not fix the generator on purpose: the held-out corpus is frozen, and regenerating it after seeing results would destroy the one property that makes the held-out comparison worth anything.
 - **What we'd fix first:** a corpus where the reported reason code is sometimes wrong, so diagnosis is a real task; a held-out adversarial suite the gate was never fitted to; and a second check on the citations themselves, so provenance stops being declaration-based.
 - **Provenance constrains the *stated* basis, not the real one.** An agent that reads a note, is influenced by it, and doesn't cite it slips through. We treat unknown fields as untrusted and ask for honest citation, but this is a declaration-based control — it raises the cost of a successful injection, it doesn't eliminate it. The next thing we'd build is a second, adversarial check on the citation itself.
