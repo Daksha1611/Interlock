@@ -141,30 +141,20 @@ Where the agent fell for traps: retrying past an exhausted attempt cap on a dupl
 
 ## What's still open
 
-*Paused 2026-08-23. Working tree clean, `origin/main` in sync, 114 tests passing.*
+*Updated 2026-09-01.*
 
-**1. Re-run the three-way held-out comparison (B0 vs B1 vs agent).** This is the
-only thing blocking the rest.
-
-```bash
-PYTHONPATH=src python -m eval.report --strategies B0,B1,agent \
-  --data-dir data/holdout --out runs/results/holdout_three_way_<date>.json
-```
-
-The 2026-08-23 attempt is void and its report was deleted rather than committed:
-it exhausted Groq's 200k tokens/day ceiling at decision 92 of 202, and every call
-after that became an escalate-on-failure substitution, dragging apparent recovery
-down to 7.3%. Re-run it with **both** providers configured (don't pin to one), on
-a fresh token budget, and check `integrity.metrics_trustworthy` in the output
-before trusting any number. `--limit-orders N` caps the spend.
-
-The B0/B1 halves of that run were valid and are unaffected — 25.3% and 27.3%
-recovery respectively, 0 policy violations each, over 150 held-out orders.
-
-2. Diagnosis confusion matrix and honesty-section writeup from that held-out run.
-3. Fill the remaining `[PENDING]` markers in `PITCH.md` (agent's recovery row,
-   honesty/limitations items).
-4. Final pitch deck pass: framing, live audit-replay demo, recovery table, limitations.
+1. **Held-out three-way comparison (B0/B1/agent)** — running. Fills the recovery
+   table in `PITCH.md`. Check `integrity.metrics_trustworthy` in the output before
+   trusting any number; if it is false the run is void and gets deleted, not
+   salvaged.
+2. **Live-agent adversarial re-run** on the current 11-scenario suite, to get
+   provenance-probe evidence from the agent rather than only from the unit tests.
+   Cheap (11 requests per replicate) but deliberately queued behind the held-out
+   run so the two don't compete for the same daily quota.
+3. **B2 uplift baseline** (T-learner / X-learner over logged exploration data,
+   zero LLM cost) — optional, only if there's time after the above.
+4. **The project spec is not checked in.** A reviewer can't "ask the author", so
+   this needs the original document added to the repo.
 
 ## Design notes worth knowing before the panel
 
