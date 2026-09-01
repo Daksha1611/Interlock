@@ -2,6 +2,8 @@
 
 **Track 03 — AI Revenue Recovery (Razorpay AI Buildathon)**
 
+**▶ [Live demo — results & audit explorer](https://daksha1611.github.io/bounded-recovery-engine/)** — a static, read-only viewer over the committed run artifacts. Browse every logged decision from the held-out run: the context the gate saw, the agent's diagnosis and confidence, its cited fields, all 13 invariants evaluated, and the final disposition. Filter by ALLOW / MODIFY / DENY. No backend and no API keys — the FastAPI app is deliberately **not** deployed publicly, since `/run` makes live LLM calls.
+
 Razorpay already ships AI-driven retry timing (Optimizer, smart routing, in-session retries). What it hasn't shipped is an LLM *reasoning* about an individual failed payment and choosing an action in natural language. The open question that opens up: **what stops it from being confidently, expensively wrong?**
 
 This project's answer: a propose/dispose architecture. An LLM agent diagnoses the failure and proposes an action. A deterministic policy gate — ordinary Python reading YAML, no model call, no prompt — is the *only* path to actually moving money or contacting a customer. The agent has no import path to the executor. Every decision, including every refusal, is logged and replayable offline without an LLM call.
@@ -137,7 +139,7 @@ half the section.*
 
 Severity tiers (catastrophic / severe / moderate): **0 / 0 / 0** for all three strategies. One double settlement on the agent's run is excluded as reconciliation timing — a retry settled before an independent bank transfer was recorded, which the gate could not have known at decision time.
 
-The agent recovers more using **fewer retry attempts than either baseline**. Two effects, only one to its credit: it targets retries far better (36% of its retries recover, against B0's 18% and B1's 13%), and it uses SWITCH_RAIL, which neither baseline ever proposes. Part of the gap is therefore a wider action space rather than better judgement — see `PITCH.md` §5.
+The agent recovers more using **fewer retry attempts than either baseline**. Two effects, only one to its credit: it targets retries far better (**47%** of the retries it executes recover, against B1's 13% and B0's 33% — RETRY only, SWITCH_RAIL excluded), and it uses SWITCH_RAIL, which neither baseline ever proposes. Part of the gap is therefore a wider action space rather than better judgement — see `PITCH.md` §5.
 
 **The recovery lift is conditional on a simulated outcome model.** Whether a retry succeeds is decided by curves we specified in `config/taxonomy.yaml` (a `sigmoid_time` with `peak_prob: 0.55` at a 48h midpoint, `nudge_recovery_prob` 0.25–0.45, a flat `contact_lift: 0.10`) — not fitted to production traffic. Note where the advantage lands: the agent's retries with no prior nudge succeed at **55%** against B1's 13%, and `peak_prob` is **0.55**. A large part of what this measures is whether an LLM can find the peak of a curve we hand-specified. Real curves vary by issuer, rail, amount band and time of day, and are exactly what Razorpay already optimises with far more data — so this is **not** a production lift estimate, and the thesis does not rest on it. SWITCH_RAIL's curves are the least constrained of all, since neither baseline ever exercises them.
 

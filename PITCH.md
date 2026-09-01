@@ -119,13 +119,27 @@ All three strategies have RETRY. Same action, same gate, same corpus:
 
 | | retries executed | recovered | hit rate |
 |---|---|---|---|
-| B0 (blind retry) | 214 | 38 | **18%** |
-| B1 (scheduled retry) | 191 | 24 | **13%** |
-| **agent (LLM)** | 126 | 45 | **36%** |
+| B0 (blind retry) | 116 | 38 | **33%** |
+| B1 (scheduled retry) | 181 | 24 | **13%** |
+| **agent (LLM)** | 95 | 45 | **47%** |
 
-> "On the one action all three share, the agent is roughly two to three times better at
-> judging when a retry is worth spending. That's not a bigger toolbox — it's the same
-> tool, used better."
+*RETRY only — SWITCH_RAIL excluded, so this is strictly the action all three share.
+Denominator is retries that actually **executed**, which matches the `attempts` column
+below.*
+
+> "On the one action all three share, the agent recovers on 47% of the retries it
+> spends, against B1's 13%. That's not a bigger toolbox — it's the same tool, used
+> better."
+
+**But look at B0 before drawing the wrong conclusion.** Blind retry hits 33% here,
+which is far better than a strategy with no logic deserves — and the reason is the
+gate. B0 *proposed* 214 retries; the gate denied 98 of them. What survived to execute
+was the 116 the invariants couldn't object to.
+
+> "The gate isn't only a safety device in this table, it's a performance one. It threw
+> out nearly half of blind retry's ideas and roughly doubled the hit rate of what was
+> left. That's worth saying plainly: our own baseline's respectable number is partly
+> our gate's doing, not the baseline's."
 
 Now the totals, which include an action the baselines don't have:
 

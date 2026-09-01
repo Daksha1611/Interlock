@@ -1,0 +1,51 @@
+{
+  "retry_targeting": {
+    "B0": {
+      "retries_executed": 116,
+      "recovered": 38,
+      "hit_rate": 0.3275862068965517
+    },
+    "B1": {
+      "retries_executed": 181,
+      "recovered": 24,
+      "hit_rate": 0.13259668508287292
+    },
+    "agent": {
+      "retries_executed": 95,
+      "recovered": 45,
+      "hit_rate": 0.47368421052631576
+    }
+  },
+  "recoveries_by_action": {
+    "B0": {
+      "counts": {
+        "RETRY": 38
+      },
+      "value_paise": {
+        "RETRY": 5443229
+      }
+    },
+    "B1": {
+      "counts": {
+        "RETRY": 24,
+        "NUDGE": 17
+      },
+      "value_paise": {
+        "RETRY": 3044503,
+        "NUDGE": 3682566
+      }
+    },
+    "agent": {
+      "counts": {
+        "RETRY": 45,
+        "NUDGE": 19,
+        "SWITCH_RAIL": 5
+      },
+      "value_paise": {
+        "RETRY": 6938662,
+        "NUDGE": 2181876,
+        "SWITCH_RAIL": 913652
+      }
+    }
+  }
+}

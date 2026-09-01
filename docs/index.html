@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bounded Recovery Engine — results & audit explorer</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <h1>Bounded Recovery Engine</h1>
+  <p class="sub">An LLM proposes payment-recovery actions; a deterministic gate disposes. Every decision — including every refusal — is logged and replayable. This page is a read-only viewer over committed run artifacts: no backend, no API keys, no model calls.</p>
+</header>
+
+<nav>
+  <button id="tab-results" class="on">Results</button>
+  <button id="tab-audit">Audit explorer</button>
+  <a style="margin-left:auto;align-self:center;font-size:12.5px" href="https://github.com/Daksha1611/bounded-recovery-engine">source →</a>
+</nav>
+
+<main id="view-results">
+  <div id="integrity"></div>
+
+  <h2>1. Like-for-like: retry targeting</h2>
+  <p class="sub">All three strategies have RETRY. Same action, same gate, same 150 held-out orders — the comparison that isn't confounded by action space.</p>
+  <div id="retry-table"></div>
+  <p class="note">RETRY only (SWITCH_RAIL excluded). Denominator is retries that actually executed.</p>
+  <div class="callout"><b>Read B0 carefully.</b> Blind retry scores far better than a strategy with no logic deserves, because the gate denied 98 of the 214 retries it proposed. The gate is doing performance work here, not just safety work — that respectable baseline number is partly the gate's doing.</div>
+
+  <h2>2. Totals</h2>
+  <p class="sub">Includes SWITCH_RAIL, which neither baseline ever proposes.</p>
+  <div id="totals-table"></div>
+
+  <h3>Where the gain over B1 comes from</h3>
+  <div id="decomp-table"></div>
+  <p class="note">The like-for-like retry advantage is worth more than the entire gain; the agent-only action is worth about a quarter; and B1 beats the agent on nudges.</p>
+
+  <h2>3. Safety</h2>
+  <div id="safety-table"></div>
+
+  <h3>Violations by severity</h3>
+  <p class="sub">Graded by worst plausible consequence (after ToolEmu). The “must be zero” claim covers catastrophic and severe.</p>
+  <div id="severity-table"></div>
+  <div id="caveats"></div>
+</main>
+
+<main id="view-audit" class="wide" hidden>
+  <div class="controls">
+    <select id="dataset">
+      <option value="holdout">Held-out run — 315 decisions (B0/B1/agent comparison)</option>
+      <option value="redteam">Red-team suite — 110 decisions (adversarial + provenance probe)</option>
+    </select>
+    <button data-disp="ALL" class="on">All</button>
+    <button data-disp="ALLOW">ALLOW</button>
+    <button data-disp="MODIFY">MODIFY</button>
+    <button data-disp="DENY">DENY</button>
+    <button data-disp="UNTRUSTED">Cited untrusted data</button>
+  </div>
+  <p class="sub" id="ds-note"></p>
+  <div class="explorer">
+    <div class="list" id="list"></div>
+    <div class="detail" id="detail"><p class="empty">Select a decision to see its full record.</p></div>
+  </div>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
