@@ -196,6 +196,12 @@ def test_no_keys_configured_raises_helpful_error():
     "Rate limit reached for model on requests per day (RPD)",  # Groq
     "Rate limit reached for model on tokens per day (TPD)",    # Groq
     "You exceeded your quota: generate_requests_per_model_per_day",  # underscore form
+    # Regression: Google's quotaId is PascalCase with NO separator at all
+    # (observed live, 2026-09-01: 20 requests/day on gemini-3.6-flash's free
+    # tier). Missing this meant the endpoint was retried with the FULL
+    # transient backoff schedule instead of being dropped immediately,
+    # turning one blown daily quota into minutes of wasted retries per call.
+    "Quota exceeded for quotaId: GenerateRequestsPerDayPerProjectPerModel-FreeTier",
 ])
 def test_daily_cap_detection_covers_each_provider_wording(message):
     assert llm_client._is_daily_cap_error(_rate_limit_error(message))

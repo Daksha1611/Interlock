@@ -89,7 +89,11 @@ def _client_for(ep: _Endpoint) -> OpenAI:
 
 
 _DAILY_CAP_RE = re.compile(
-    r"per[-_ ]day"       # OpenRouter says "free-models-per-day"; separators vary by provider
+    r"per[-_ ]?day"      # OpenRouter says "free-models-per-day"; Google's quotaId is
+                         # "GenerateRequestsPerDayPerProjectPerModel-FreeTier" with NO
+                         # separator at all (PascalCase) — separator must be optional,
+                         # not just vary, or this silently misses that daily cap and
+                         # burns the whole backoff schedule retrying a dead endpoint.
     r"|per[-_ ]diem"
     r"|\b[rt]pd\b"       # Groq spells the daily ceilings RPD / TPD
     r"|daily (?:limit|quota)",
