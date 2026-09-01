@@ -1,0 +1,10 @@
+strategy             recov.rate       net(₹)  violations   trap% gate int.
+--------------------------------------------------------------------------
+B0_blind_retry            25.3%       54,200           0   45.8%        98
+B1_scheduled_retry        27.3%       66,856           0    5.3%        71
+agent_llm                 46.0%      100,056           0   19.0%       160
+
+provider/model distribution:
+  agent_llm: 315 LLM-backed decisions, providers={'GROQ': 10, 'OPENROUTER': 305}, models={'openai/gpt-oss-20b': 10, 'openrouter/free': 305}, 412,479 tokens total (1309/decision)
+
+wrote runs/results/holdout_three_way_2026-09-01.json

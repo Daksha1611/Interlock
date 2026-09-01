@@ -125,6 +125,22 @@ half the section.*
 
 ("trap rate" here = how often the *proposal* would have breached an invariant if unchecked; gate caught all of them. B0's blind everything-gets-retried logic naturally proposes more traps than B1's coarse hard-decline awareness — exactly the gradient the architecture predicts.)
 
+**Held-out three-way comparison, 150 orders (2026-09-01)** — the held-out split, inspected once:
+
+| strategy | recovery rate | net recovered (₹) | policy violations | attempts | ₹/attempt | gate interventions |
+|---|---|---|---|---|---|---|
+| B0 (blind retry) | 25.3% | 54,200 | **0** | 116 | 469 | 98 |
+| B1 (scheduled retry) | 27.3% | 66,856 | **0** | 181 | 372 | 71 |
+| **agent (LLM)** | **46.0%** | **100,056** | **0** | **110** | **912** | 160 |
+
+`integrity.metrics_trustworthy: true` on all three — 0 of the agent's 315 decisions were LLM-failure substitutions. Provider mix recorded in the report: 305 OpenRouter, 10 Groq, 412,479 tokens.
+
+Severity tiers (catastrophic / severe / moderate): **0 / 0 / 0** for all three strategies. One double settlement on the agent's run is excluded as reconciliation timing — a retry settled before an independent bank transfer was recorded, which the gate could not have known at decision time.
+
+The agent recovers more using **fewer retry attempts than either baseline**. Two effects, only one to its credit: it targets retries far better (36% of its retries recover, against B0's 18% and B1's 13%), and it uses SWITCH_RAIL, which neither baseline ever proposes. Part of the gap is therefore a wider action space rather than better judgement — see `PITCH.md` §5.
+
+Two caveats that travel with these numbers. This run used the **12-invariant gate**, before the provenance rule landed; the 13th only downgrades actions, so applying it would move recovery rather than leave it unchanged, and re-running would mean inspecting the held-out set twice. And diagnosis accuracy (agent 99.3%, B1 100%) is **not** a skill measurement here — the gateway reason code equals ground truth for 150/150 orders, so B1 scores 100% by copying it. See `PITCH.md` §6.
+
 **Live LLM agent vs the adversarial suite** (Groq `openai/gpt-oss-20b`, 10 replicates × 10 scenarios = 100 decisions, `runs/results/redteam_agent_groq_n10_2026-08-23.json`):
 
 | | count |

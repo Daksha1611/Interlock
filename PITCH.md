@@ -82,37 +82,110 @@ All three replay to the identical disposition, recomputed from the logged contex
 
 | strategy | recovery rate | net recovered (₹) | policy violations | gate interventions |
 |---|---|---|---|---|
-| B0 (blind retry) | [B0_REC] | [B0_NET] | [B0_VIOL] | [B0_INT] |
-| B1 (scheduled retry) | [B1_REC] | [B1_NET] | [B1_VIOL] | [B1_INT] |
-| agent (LLM) | [AG_REC] | [AG_NET] | [AG_VIOL] | [AG_INT] |
+| strategy | recovery rate | net recovered (₹) | policy violations | attempts | gate interventions |
+|---|---|---|---|---|---|
+| B0 (blind retry) | 25.3% | 54,200 | **0** | 116 | 98 |
+| B1 (scheduled retry) | 27.3% | 66,856 | **0** | 181 | 71 |
+| **agent (LLM)** | **46.0%** | **100,056** | **0** | **110** | 160 |
 
-[RECOVERY_COMMENTARY]
+*315 agent decisions, 0 LLM-failure substitutions, `metrics_trustworthy: true`. Model
+mix recorded in the report: 305 OpenRouter, 10 Groq, 412,479 tokens.*
+
+> "46% against B1's 27%, zero violations. But the number I'd actually defend is the
+> one next to it: **110 attempts. Fewer than either baseline.** B1 spent 181 attempts
+> to recover 41 orders; the agent spent 110 to recover 69. It isn't winning by doing
+> more, it's winning by choosing better — ₹912 recovered per attempt against B1's
+> ₹372."
+
+Where the gap actually comes from, because "the LLM is smarter" is not an answer:
+
+| | retry hit rate | uses SWITCH_RAIL | recoveries |
+|---|---|---|---|
+| B0 | 38/214 — **18%** | no | 38 |
+| B1 | 24/191 — **13%** | no | 41 |
+| agent | 45/126 — **36%** | **yes** — 43 proposals, 5 recoveries | 69 |
+
+Two distinct effects, and only one of them is to our credit:
+
+1. **The agent targets retries roughly 2–3× better.** Same action, same gate, same
+   corpus — it is materially better at judging *when* a retry is worth spending.
+2. **It uses an action the baselines structurally cannot.** B0 only ever proposes
+   RETRY; B1 proposes RETRY and NUDGE. Neither ever proposes SWITCH_RAIL. So part of
+   this gap is a wider action space, not better judgement — and we should say so
+   before someone asks. A rules-based strategy with access to all five action types
+   would be a harder opponent than either baseline here, which is exactly why the
+   uplift baseline in future work is the comparison we most want to see run.
 
 **Severity, not a binary count** (after ToolEmu, Ruan et al., ICLR 2024). A single "violations" number treats "charged a customer twice" and "texted them at 22:00" as the same event:
 
 | tier | what it covers | count |
 |---|---|---|
-| catastrophic | gate-inconsistent double charge, RISK_BLOCK retry | [SEV_CAT] |
-| severe | DNC breach, mandate regulatory cap breach | [SEV_SEV] |
-| moderate | quiet-hours contact, contact-frequency breach | [SEV_MOD] |
+| catastrophic | gate-inconsistent double charge, RISK_BLOCK retry | **0** |
+| severe | DNC breach, mandate regulatory cap breach | **0** |
+| moderate | quiet-hours contact, contact-frequency breach | **0** |
+
+All three tiers zero, for all three strategies, on the held-out set. One double
+settlement occurred on the agent's run and is **excluded** — a retry settled before an
+independent bank transfer was recorded, which the gate could not have known at
+decision time. It is reported as a reconciliation-timing gap, not folded into the
+zero.
 
 The "must be zero" claim covers **catastrophic and severe** — pinned in code (`MUST_BE_ZERO_TIERS`) so it can't quietly drift to cover more or less than what we defended here.
 
-## 6. The void run — why the honesty claims are load-bearing (30s)
+## 6. Two things our own tooling caught about us (30s)
 
-This is the beat to slow down on.
+This is the beat to slow down on. It is one argument, not two admissions.
 
-> "On the 23rd our held-out run reported the agent at **7.3% recovery** against B1's 27.3%. That's a plausible number. It's the kind of number you'd shrug at, write up as 'the LLM underperformed,' and move on."
+**The first: a number that was quietly false.** On the 23rd our held-out run reported
+the agent at **7.3%** recovery against B1's 27.3%.
 
-> "It was wrong. The run had exhausted its token quota at decision 92 of 202. Every call after that failed, and our orchestrator substitutes an ESCALATE when a call fails — so the run *completed*, produced a full audit trail, and reported a number that described an outage rather than a strategy."
+> "That's a plausible number. It's the kind of number you shrug at, write up as 'the
+> LLM underperformed,' and move on from."
 
-> "We caught it because we'd built a check that asks a different question from 'did the run finish': **how much of this run was the strategy actually deciding?** Any report where more than 5% of decisions were failure substitutions is marked untrustworthy and the recovery numbers are stamped INVALID. We deleted that report rather than publish it."
+It was wrong. The run had exhausted its token quota at decision 92 of 202. Every call
+after that failed, and the orchestrator substitutes an ESCALATE when a call fails — so
+the run *completed*, produced a full audit trail, and reported a figure that described
+an outage rather than a strategy. We caught it because we had built a check that asks
+a different question from "did the run finish": **how much of this run was the
+strategy actually deciding?** Any report where more than 5% of decisions were failure
+substitutions is stamped INVALID. We deleted that report rather than publish it.
 
-Show `eval/metrics.integrity_metrics` and the `<< INVALID` row marker.
+> "The run we're showing you today reports 0 out of 315 substitutions. That's not us
+> asserting the number is clean — it's the same check that condemned the last one,
+> run again and printed either way."
 
-> "I'm telling you about our worst run on purpose. Every team here will show you a number. The question worth asking any of them is: what would have had to go wrong for that number to be false, and would you have noticed? We built the thing that notices. That's the same instinct as the gate — assume the component can fail, and make the failure structurally visible instead of hoping it doesn't happen."
+**The second: a metric that was quietly meaningless.** We built a diagnosis confusion
+matrix, as our own spec asked for. Then we checked the corpus underneath it and found
+the gateway's reason code equals the true reason for **150 of 150** held-out orders.
+The answer was sitting in the input. B1 scores 100% on that metric by copying a field.
 
-Two real bugs found the same way, both fixed and regression-tested: a malformed provider response that crashed past all retry logic, and a daily-quota error whose wording our detector missed, so a dead endpoint was retried through a full backoff schedule on every decision.
+> "We could have published 'the agent diagnoses at 99.3% accuracy.' It's true, it
+> sounds good, and it's worthless — a one-line strategy beats it. Worse, that 99.3%
+> against B1's 100% means the agent *overrode a correct signal once and made it
+> worse*. Read properly, our accuracy metric is measuring the opposite of what it
+> appears to."
+
+We kept the metric, reframed it as what it actually measures, and wrote down that our
+generator makes diagnosis easier than reality — real gateway codes are noisy and
+`DO_NOT_HONOR` is a catch-all, as our own failure taxonomy says. We did **not** fix
+the generator: the held-out corpus is frozen, and regenerating it after seeing results
+would destroy the only thing that makes a held-out comparison worth anything.
+
+**Why these belong together.** Neither was found by a reviewer. One was caught by
+tooling we built for the purpose; the other by checking a metric we had every
+incentive not to check, at a moment when it would have flattered us. Both were
+corrected against our own interest — one number deleted, one claim demoted.
+
+> "Every team here will show you a number. The question worth asking any of them is:
+> what would have had to go wrong for that number to be false, and would you have
+> noticed? We can answer that twice, with receipts. That's the same instinct as the
+> gate itself — assume your own component is fallible and make the failure
+> structurally visible, rather than hoping it doesn't happen."
+
+Two real bugs surfaced the same way and are fixed with regression tests: a malformed
+provider response that crashed past all retry logic, and a daily-quota error whose
+wording our detector missed, so a dead endpoint was retried through a full backoff
+schedule on every decision.
 
 ## 7. Limitations (40s)
 
@@ -120,7 +193,13 @@ Said before anyone has to ask:
 
 - **The adversarial suite is in-sample.** Two invariants — `hard_decline_no_retry` and the extended `risk_block` — were *derived* from red-teaming the baselines against this same suite. The gate is partly fitted to these scenarios. It doesn't touch the structural claim, but the trap rates should be read as in-sample, not as generalisation.
 - **Replicates are not coverage.** 100 decisions is 10 families seen 10 times, measuring model variance on fixed setups. The confidence interval on any single family's trap rate is wide.
-- **Our diagnosis-accuracy number is weaker than it looks, and we'd rather say so than be caught.** In this corpus the gateway's reason code already equals the true reason for **150/150** held-out orders. So the answer is sitting in the input, and B1 scores 100% by copying it. Our confusion matrix therefore measures whether the agent *corrupts a correct signal*, not whether it solves a hard diagnostic problem. [CONFIDENTLY_WRONG]
+- **The diagnosis metric is degenerate here** — covered in beat 6. Short version: the reason code equals ground truth 150/150, so the metric measures signal corruption, not diagnostic skill. On the held-out run the agent was confidently wrong exactly **once in 147
+diagnoses** (`dec_4748702490d5`): a `GATEWAY_TIMEOUT` on a UPI payment read as
+`UPI_TIMEOUT` at 0.82 confidence. The brief asked for two or three examples; there is
+one, so we show one rather than pad the list. And it is a near-miss — the reasoning
+was defensible, the chosen action (RETRY) was identical under either label, and the
+gate allowed it. Calibration is weak but real: mean confidence 0.88 when right, 0.82
+when wrong.
 - **The root cause is our generator, and it makes diagnosis easier than reality.** Real gateway reason codes are noisy and frequently misleading — `DO_NOT_HONOR` is a catch-all that covers everything from fraud suspicion to an expired card to a velocity limit, and issuer outages routinely surface as generic declines rather than as anything labelled an outage. Ours are perfectly faithful. So this metric would be **substantially harder in a real deployment**, and our number should not be read as transferring. We did not fix the generator on purpose: the held-out corpus is frozen, and regenerating it after seeing results would destroy the one property that makes the held-out comparison worth anything.
 - **What we'd fix first:** a corpus where the reported reason code is sometimes wrong, so diagnosis is a real task; a held-out adversarial suite the gate was never fitted to; and a second check on the citations themselves, so provenance stops being declaration-based.
 - **Provenance constrains the *stated* basis, not the real one.** An agent that reads a note, is influenced by it, and doesn't cite it slips through. We treat unknown fields as untrusted and ask for honest citation, but this is a declaration-based control — it raises the cost of a successful injection, it doesn't eliminate it. The next thing we'd build is a second, adversarial check on the citation itself.
@@ -159,6 +238,6 @@ Two things worth saying about that:
 
 ## Numbers to have ready if asked
 
-- **154 tests**, all passing, no network — 13 invariants × pass/fail cases, 4 structural isolation tests, 17 provenance tests, integration tests for ALLOW/DENY/MODIFY.
+- **157 tests**, all passing, no network — 13 invariants × pass/fail cases, 4 structural isolation tests, 17 provenance tests, integration tests for ALLOW/DENY/MODIFY.
 - Free-tier ceilings that shaped the evaluation: OpenRouter ~50 requests/day, Groq 200,000 tokens/day, Google 20 requests/day. Three different units — budget a run in the right one or it dies halfway.
 - The gate is **~200 lines of ordinary Python**. That's the whole point: the thing standing between an LLM and someone's money should be small enough to read in one sitting.
