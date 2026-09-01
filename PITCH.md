@@ -121,10 +121,39 @@ Said before anyone has to ask:
 - **The adversarial suite is in-sample.** Two invariants — `hard_decline_no_retry` and the extended `risk_block` — were *derived* from red-teaming the baselines against this same suite. The gate is partly fitted to these scenarios. It doesn't touch the structural claim, but the trap rates should be read as in-sample, not as generalisation.
 - **Replicates are not coverage.** 100 decisions is 10 families seen 10 times, measuring model variance on fixed setups. The confidence interval on any single family's trap rate is wide.
 - **Our diagnosis-accuracy number is weaker than it looks, and we'd rather say so than be caught.** In this corpus the gateway's reason code already equals the true reason for **150/150** held-out orders. So the answer is sitting in the input, and B1 scores 100% by copying it. Our confusion matrix therefore measures whether the agent *corrupts a correct signal*, not whether it solves a hard diagnostic problem. [CONFIDENTLY_WRONG]
+- **The root cause is our generator, and it makes diagnosis easier than reality.** Real gateway reason codes are noisy and frequently misleading — `DO_NOT_HONOR` is a catch-all that covers everything from fraud suspicion to an expired card to a velocity limit, and issuer outages routinely surface as generic declines rather than as anything labelled an outage. Ours are perfectly faithful. So this metric would be **substantially harder in a real deployment**, and our number should not be read as transferring. We did not fix the generator on purpose: the held-out corpus is frozen, and regenerating it after seeing results would destroy the one property that makes the held-out comparison worth anything.
 - **What we'd fix first:** a corpus where the reported reason code is sometimes wrong, so diagnosis is a real task; a held-out adversarial suite the gate was never fitted to; and a second check on the citations themselves, so provenance stops being declaration-based.
 - **Provenance constrains the *stated* basis, not the real one.** An agent that reads a note, is influenced by it, and doesn't cite it slips through. We treat unknown fields as untrusted and ask for honest citation, but this is a declaration-based control — it raises the cost of a successful injection, it doesn't eliminate it. The next thing we'd build is a second, adversarial check on the citation itself.
 - **Information-lag double settlements are real and disclosed.** A retry can succeed hours before an independent bank transfer is recorded. The gate could not have known, so it's not counted as a policy violation — but it's tracked and reported separately, never folded into "zero violations."
-- **The held-out comparison was run against the 12-invariant gate**, before provenance landed. Provenance is evidenced on the adversarial suite, not in the recovery table above. Re-running the holdout to include it would mean inspecting the held-out set a second time, which we chose not to do.
+- **The held-out comparison was run against the 12-invariant gate**, before provenance landed. This matters specifically because the 13th invariant *downgrades* actions — every action it touches becomes an ESCALATE, which recovers nothing — so applying it would move the recovery numbers, not leave them alone. Re-running to include it would mean inspecting the held-out set a second time, so we report the 12-invariant result and say which gate produced it. Provenance is evidenced on the adversarial suite instead.
+
+## Future work — the comparison we did not run
+
+**An uplift-optimal classical policy (B2).** Choosing a recovery action is, stated
+plainly, a causal inference problem: for this order, which of retry / switch rail /
+nudge / wait produces the largest increase in probability of settlement *versus not
+acting*? That is a conditional average treatment effect, and the standard tools are
+metalearners — the T-learner and X-learner of Künzel et al., *PNAS* 2019 — fit over
+logged outcomes from a random-action exploration policy, then deployed as an argmax
+over estimated per-action CATE.
+
+We did not build it, and we are naming it rather than omitting it, because it is the
+most credible threat to our recovery numbers: **we do not know whether an
+uplift-optimal classical policy would beat the LLM on recovery.** It plausibly would.
+It costs no inference, it has no prompt to attack, and on a problem this structured a
+well-fit metalearner is a strong opponent.
+
+Two things worth saying about that:
+
+1. It would not touch the thesis. The claim is that an LLM given authority over money
+   can be made structurally incapable of a wrong action, with every decision
+   auditable. A classical policy that recovers more is a different, older answer to a
+   different question — one that gives up the natural-language reasoning and the
+   readable justification that made the audit trail worth building.
+2. **We deliberately did not decide this after seeing our own result.** Choosing
+   whether to include a comparator once you know what it would be compared against is
+   post-hoc selection — exactly the move this project's integrity tooling exists to
+   catch. Skipped up front, disclosed here.
 
 ---
 
