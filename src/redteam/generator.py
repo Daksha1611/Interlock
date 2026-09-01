@@ -26,7 +26,6 @@ from gate.executor import execute
 from redteam.scenarios import ALL_SCENARIOS, ScenarioCase
 from world.ledger import Ledger
 
-
 # Stated here rather than left for a panellist to find. Both points weaken
 # the result somewhat; both are real.
 METHODOLOGY_NOTE = {

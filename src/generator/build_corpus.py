@@ -17,7 +17,13 @@ from domain.customer import Customer
 from domain.events import PaymentEvent
 from domain.serde import customer_to_dict, event_to_dict
 from generator.customers import build_customers
-from generator.distributions import MANDATE_REASONS, bernoulli, sample_amount, sample_rail, sample_reason
+from generator.distributions import (
+    MANDATE_REASONS,
+    bernoulli,
+    sample_amount,
+    sample_rail,
+    sample_reason,
+)
 from world.ledger import OrderGroundTruth, ground_truth_to_dict
 
 SIM_START = datetime(2026, 7, 1, 0, 0, 0)

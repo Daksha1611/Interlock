@@ -27,9 +27,10 @@ agent/  (proposes)  ──Action──▶  gate/  (disposes)  ──▶  executo
 - `src/world/` — the simulator's ground truth (`outcome_model.py`, recovery curves from `config/taxonomy.yaml`) and the money ledger (`ledger.py`). Shares no imports with `agent/`.
 - `src/generator/` — builds the synthetic corpus (`data/corpus`, `data/holdout`), seeded and frozen.
 - `src/baselines/` — B0 (blind retry) and B1 (scheduled retry), the numbers to beat.
-- `src/gate/` — **the centrepiece**. `rules.py` (12 pure invariant functions), `enforcer.py` (ALLOW/DENY/MODIFY), `executor.py` (the only caller of money-moving code).
+- `src/gate/` — **the centrepiece**. `rules.py` (13 pure invariant functions), `enforcer.py` (ALLOW/DENY/MODIFY), `executor.py` (the only caller of money-moving code).
 - `src/agent/` — `diagnose.py` + `decide.py` (one OpenRouter call each proposal, to stay inside a free-tier budget) + `orchestrator.py`. No import of `gate/` or `world/`.
-- `src/redteam/` — ten adversarial scenarios engineered to induce a wrong money action, each with a per-scenario definition of which action types are actually dangerous.
+- `src/redteam/` — ten adversarial scenarios engineered to induce a wrong money action, each with a per-scenario definition of which action types are actually dangerous, plus one provenance probe (see below).
+- `src/domain/provenance.py` — the TRUSTED/UNTRUSTED field taxonomy behind the 13th invariant. Shared by `agent/` (which declares what it cited) and `gate/` (which judges it), without either importing the other.
 - `src/audit/` — append-only decision log + offline replay (`replay.py` reconstructs any gate decision from the logged context, no LLM call).
 - `src/eval/` — the harness that runs any strategy through the same gate/executor, plus metrics (safety first, then recovery, then honesty) and the CLI report.
 - `src/api/` — FastAPI surface: `/run`, `/runs/{run_id}`, `/audit/{run_id}/{decision_id}`, `/compare`.
@@ -38,6 +39,7 @@ Structural guarantees, enforced by `tests/test_isolation.py` (not just asserted 
 - `agent/` has no import path to `gate/` or `world/`.
 - `world/` has no import path to `agent/`.
 - `gate/` contains no model call (grepped for).
+- A money or contact action justified by an UNTRUSTED context field cannot execute — it is downgraded to ESCALATE (`untrusted_provenance`, the 13th invariant).
 - Only `gate/executor.py` may call `ledger.record_attempt` / `record_contact` / `record_mandate_presentation`.
 
 ## Setup
@@ -106,7 +108,11 @@ PYTHONPATH=src python -m audit.demo <run_id>
 ```
 Confirmed working on a B1 run: ALLOW (clean retry), MODIFY (a NUDGE rescheduled off quiet hours to 09:00), DENY (a RETRY blocked for exceeding the amount ceiling — should have escalated instead). All three replay-verified offline, no LLM call.
 
-## Results so far (2026-08-22)
+## Results so far
+
+*Baselines measured 2026-08-22; the 100-decision adversarial run 2026-08-23. Each
+result below carries its own date — a single header date was previously wrong for
+half the section.*
 
 **Gate:** 41 tests passing (12 invariants × pass/fail cases, 4 isolation/structural tests, integration tests for ALLOW/DENY/MODIFY including a simulated prompt-injection case).
 
