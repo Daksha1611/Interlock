@@ -89,6 +89,7 @@ def action_to_dict(a: Action) -> dict:
         "reasoning": a.reasoning,
         "confidence": a.confidence,
         "diagnosed_reason": a.diagnosed_reason,
+        "cited_fields": list(a.cited_fields),
         "metadata": a.metadata,
     }
 
@@ -105,6 +106,7 @@ def action_from_dict(d: dict) -> Action:
         reasoning=d.get("reasoning", ""),
         confidence=d.get("confidence", 0.0),
         diagnosed_reason=d.get("diagnosed_reason"),
+        cited_fields=tuple(d.get("cited_fields", ())),
         metadata=d.get("metadata", {}),
     )
 

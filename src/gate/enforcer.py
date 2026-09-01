@@ -11,7 +11,7 @@ from enum import Enum
 
 from domain.actions import Action, ActionType
 from domain.context import Context
-from gate.rules import ALL_RULES, RuleResult
+from gate.rules import ALL_RULES, RuleResult, untrusted_provenance
 
 
 class Outcome(str, Enum):
@@ -39,13 +39,37 @@ class Gate:
         self.policy = policy
 
     def evaluate(self, action: Action, ctx: Context) -> GateDecision:
+        # Provenance is judged on the PROPOSAL, before any rewrite: the
+        # question is what the agent said justified its action, and the
+        # downgrade below would otherwise erase the evidence of it.
+        provenance = untrusted_provenance(action, ctx, self.policy)
+
+        # Every other rule is judged on the action as it would have executed
+        # had provenance not intervened — NOT on the downgraded ESCALATE.
+        # Judging them after the downgrade would let the downgrade launder a
+        # proposal another invariant would have denied outright (an ESCALATE
+        # trivially satisfies rules scoped to money actions), turning a DENY
+        # into a MODIFY and quietly under-counting the trap.
         fixed, notes = self._autofix(action, ctx)
-        results = [rule(fixed, ctx, self.policy) for rule in ALL_RULES]
-        failed = [r for r in results if not r.passed]
+        results = [
+            provenance if rule is untrusted_provenance else rule(fixed, ctx, self.policy)
+            for rule in ALL_RULES
+        ]
+        failed = [r for r in results if not r.passed and r.rule != "untrusted_provenance"]
 
         if failed:
             reason = "; ".join(f"{r.rule}: {r.detail}" for r in failed)
             return GateDecision(Outcome.DENY, action, None, reason, results)
+
+        if not provenance.passed:
+            # Downgrade rather than deny: the case still deserves a human, and
+            # denying outright would throw away a recoverable payment because
+            # someone wrote text into a note field.
+            downgraded = replace(fixed, action_type=ActionType.ESCALATE, rail=None, message=None)
+            return GateDecision(
+                Outcome.MODIFY, action, downgraded,
+                f"untrusted_provenance: {provenance.detail}", results,
+            )
 
         if notes:
             return GateDecision(Outcome.MODIFY, action, fixed, "; ".join(notes), results)

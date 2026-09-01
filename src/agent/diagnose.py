@@ -35,6 +35,7 @@ class Diagnosis:
     recommended_rail: str | None
     recommended_message: str | None
     recommended_delay_hours: float
+    cited_fields: tuple[str, ...] = ()
     llm_usage: dict | None = None  # provider/model/prompt_tokens/completion_tokens
 
 
@@ -113,6 +114,18 @@ def diagnose(event: PaymentEvent, ctx: Context) -> Diagnosis:
         delay = 1.0
     delay = max(delay, 0.0)
 
+    # Normalised but NOT filtered against the known-field list: an
+    # unrecognised name is treated as untrusted downstream (fail-closed in
+    # domain.provenance), so silently dropping it here would convert a
+    # hallucinated citation into no citation at all — the one outcome that
+    # lets an unjustified action through.
+    raw_cited = raw.get("cited_fields") or []
+    if isinstance(raw_cited, str):
+        raw_cited = [raw_cited]
+    cited_fields = tuple(
+        str(f).strip() for f in list(raw_cited)[:32] if str(f).strip()
+    ) if isinstance(raw_cited, (list, tuple)) else ()
+
     return Diagnosis(
         reason=reason,
         confidence=confidence,
@@ -121,5 +134,6 @@ def diagnose(event: PaymentEvent, ctx: Context) -> Diagnosis:
         recommended_rail=recommended_rail,
         recommended_message=recommended_message,
         recommended_delay_hours=delay,
+        cited_fields=cited_fields,
         llm_usage=usage,
     )

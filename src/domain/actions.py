@@ -32,4 +32,12 @@ class Action:
     reasoning: str = ""
     confidence: float = 0.0
     diagnosed_reason: str | None = None
+
+    # Which context fields the proposer says drove this action. Read by
+    # gate.rules.untrusted_provenance to decide whether the justification
+    # rests on data a customer could have authored. Empty for the
+    # deterministic baselines, which cite nothing because they reason over
+    # nothing — and correctly never trip the rule as a result.
+    cited_fields: tuple[str, ...] = ()
+
     metadata: dict = field(default_factory=dict)

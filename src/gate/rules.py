@@ -10,9 +10,13 @@ from dataclasses import dataclass
 
 from domain.actions import Action, ActionType
 from domain.context import Context
+from domain.provenance import untrusted_citations
 from domain.reason_knowledge import HARD_DECLINE_REASONS
 
 RETRY_LIKE = {ActionType.RETRY, ActionType.SWITCH_RAIL}
+# everything that moves money or reaches the customer — i.e. everything
+# except ESCALATE/STOP, which are safe by construction
+MONEY_OR_CONTACT = {ActionType.RETRY, ActionType.SWITCH_RAIL, ActionType.NUDGE}
 
 
 @dataclass(frozen=True)
@@ -135,6 +139,38 @@ def amount_ceiling(action: Action, ctx: Context, policy: dict) -> RuleResult:
     )
 
 
+def untrusted_provenance(action: Action, ctx: Context, policy: dict) -> RuleResult:
+    """A money-moving or customer-contacting action may not be justified by
+    data a customer could have written.
+
+    The other twelve invariants ask "is this action allowed given the
+    facts?". This one asks "where did the justification come from?" — an
+    information-flow check, in the spirit of CaMeL (Debenedetti et al.,
+    2025), reduced to the one question a deterministic gate can answer
+    without an interpreter or a second model.
+
+    Note what this does NOT try to do: detect that a note is malicious.
+    That's undecidable and would put a classifier back on the money path.
+    It only requires that the *stated basis* for moving money be a
+    system-of-record fact. An agent that reads a customer note and is
+    swayed by it can still say so — and then this fires, and the action
+    becomes an escalation instead of a charge.
+
+    ESCALATE and STOP are exempt: handing a suspicious case to a human is
+    exactly the behaviour we want when untrusted text is in play.
+    """
+    if action.action_type not in MONEY_OR_CONTACT:
+        return RuleResult("untrusted_provenance", True)
+    tainted = untrusted_citations(action.cited_fields)
+    if not tainted:
+        return RuleResult("untrusted_provenance", True)
+    return RuleResult(
+        "untrusted_provenance",
+        False,
+        f"{action.action_type.value} justified by untrusted field(s) {', '.join(tainted)}: escalate instead",
+    )
+
+
 ALL_RULES = [
     attempt_cap,
     mandate_cap,
@@ -148,4 +184,5 @@ ALL_RULES = [
     contact_frequency,
     quiet_hours,
     amount_ceiling,
+    untrusted_provenance,
 ]

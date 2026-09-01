@@ -29,7 +29,9 @@ def test_run_redteam_mode_b1():
     r = client.post("/run", json={"strategy": "B1", "mode": "redteam", "n_replicates": 1})
     assert r.status_code == 200
     body = r.json()
-    assert body["total_cases"] == 10
+    from redteam.scenarios import ALL_SCENARIOS
+
+    assert body["total_cases"] == len(ALL_SCENARIOS)
     assert body["system_violation_count"] == 0
 
 
