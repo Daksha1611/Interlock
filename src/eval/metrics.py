@@ -218,6 +218,21 @@ CONFIDENTLY_WRONG_THRESHOLD = 0.8
 
 
 def honesty_metrics(records: list[DecisionRecord], ground_truths: list[OrderGroundTruth]) -> dict:
+    """Diagnosis quality — with a large caveat that must travel with it.
+
+    In this corpus the gateway-reported reason code equals the true reason
+    for 100% of orders (verified on the held-out split, 150/150). So
+    `diagnosis_accuracy` is NOT a test of diagnostic skill: the answer is
+    visible in the input, and a one-line strategy that copies the reason
+    code scores 100% — B1 does exactly that.
+
+    What this section actually measures is the opposite direction: how often
+    the agent *overrides a correct signal and makes it worse*, and whether
+    it does so confidently. Read below 100% as corruption of good
+    information, not as a hard problem partially solved. Reporting it any
+    other way would be claiming credit for a number a `return event.reason`
+    one-liner beats.
+    """
     truth_by_order = {t.order_id: t for t in ground_truths}
 
     first_decisions = {}
