@@ -3,65 +3,94 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bounded Recovery Engine — results & audit explorer</title>
+<title>Bounded Recovery Engine — results and audit trail</title>
+<meta name="description" content="An LLM proposes payment-recovery actions; a deterministic gate disposes. Results and full audit trail from the held-out evaluation.">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header>
-  <h1>Bounded Recovery Engine</h1>
-  <p class="sub">An LLM proposes payment-recovery actions; a deterministic gate disposes. Every decision — including every refusal — is logged and replayable. This page is a read-only viewer over committed run artifacts: no backend, no API keys, no model calls.</p>
-</header>
 
-<nav>
-  <button id="tab-results" class="on">Results</button>
-  <button id="tab-audit">Audit explorer</button>
-  <a style="margin-left:auto;align-self:center;font-size:12.5px" href="https://github.com/Daksha1611/bounded-recovery-engine">source →</a>
-</nav>
+<div class="wrap">
+  <header>
+    <h1>Bounded Recovery Engine</h1>
+    <p class="thesis">An LLM proposes payment-recovery actions. A deterministic policy gate — ordinary Python reading a YAML file, no model call — is the only path to moving money. Every decision, including every refusal, is logged and replayable offline.</p>
+    <div class="status" id="status">Loading run artifacts…</div>
+    <nav>
+      <a href="#results">Results</a>
+      <a href="#limitations">Limitations</a>
+      <a href="#audit">Audit explorer</a>
+      <a href="https://github.com/Daksha1611/bounded-recovery-engine">Source</a>
+    </nav>
+  </header>
 
-<main id="view-results">
-  <div id="integrity"></div>
+  <div id="error-slot"></div>
 
-  <h2>1. Like-for-like: retry targeting</h2>
-  <p class="sub">All three strategies have RETRY. Same action, same gate, same 150 held-out orders — the comparison that isn't confounded by action space.</p>
-  <div id="retry-table"></div>
-  <p class="note">RETRY only (SWITCH_RAIL excluded). Denominator is retries that actually executed.</p>
-  <div class="callout"><b>Read B0 carefully.</b> Blind retry scores far better than a strategy with no logic deserves, because the gate denied 98 of the 214 retries it proposed. The gate is doing performance work here, not just safety work — that respectable baseline number is partly the gate's doing.</div>
+  <section id="results">
+    <h2>Results</h2>
+    <h3>Like-for-like: retry targeting</h3>
+    <p class="prose">All three strategies have the RETRY action, run against the same gate over the same 150 held-out orders. This is the comparison that is not confounded by differences in action space, so it comes first.</p>
+    <div id="retry-table"></div>
+    <p class="note">RETRY only; SWITCH_RAIL excluded. The denominator is retries that actually executed, which matches the attempts column below.</p>
+    <p class="prose" style="margin-top:22px">Read B0 carefully before drawing a conclusion. Blind retry scores far better here than a strategy with no logic deserves, and the reason is the gate: B0 <em>proposed</em> 214 retries and the gate denied 98 of them. What survived to execute was the remainder the invariants could not object to. The gate is doing performance work in this table, not only safety work.</p>
 
-  <h2>2. Totals</h2>
-  <p class="sub">Includes SWITCH_RAIL, which neither baseline ever proposes.</p>
-  <div id="totals-table"></div>
+    <h4>Totals</h4>
+    <p class="prose">Including SWITCH_RAIL, which neither baseline ever proposes.</p>
+    <div id="totals-table"></div>
 
-  <h3>Where the gain over B1 comes from</h3>
-  <div id="decomp-table"></div>
-  <p class="note">The like-for-like retry advantage is worth more than the entire gain; the agent-only action is worth about a quarter; and B1 beats the agent on nudges.</p>
+    <h4>Where the gain over B1 comes from</h4>
+    <div id="decomp-table"></div>
+    <p class="note">The like-for-like retry advantage accounts for more than the entire gain. The agent-only action accounts for roughly a quarter. On nudges, which both strategies have, B1 recovers more value than the agent does.</p>
 
-  <h2>3. Safety</h2>
-  <div id="safety-table"></div>
+    <h4>Safety</h4>
+    <div id="safety-table"></div>
 
-  <h3>Violations by severity</h3>
-  <p class="sub">Graded by worst plausible consequence (after ToolEmu). The “must be zero” claim covers catastrophic and severe.</p>
-  <div id="severity-table"></div>
-  <div id="caveats"></div>
-</main>
+    <h4>Violations by severity</h4>
+    <p class="prose">Graded by worst plausible consequence to the customer, after ToolEmu (Ruan et al., ICLR 2024). A single flat count would price a double charge and a late-evening text identically. The “must be zero” claim covers the catastrophic and severe tiers, pinned in code so it cannot drift.</p>
+    <div id="severity-table"></div>
+    <p class="note" id="lag-note"></p>
+  </section>
 
-<main id="view-audit" class="wide" hidden>
-  <div class="controls">
-    <select id="dataset">
-      <option value="holdout">Held-out run — 315 decisions (B0/B1/agent comparison)</option>
-      <option value="redteam">Red-team suite — 110 decisions (adversarial + provenance probe)</option>
-    </select>
-    <button data-disp="ALL" class="on">All</button>
-    <button data-disp="ALLOW">ALLOW</button>
-    <button data-disp="MODIFY">MODIFY</button>
-    <button data-disp="DENY">DENY</button>
-    <button data-disp="UNTRUSTED">Cited untrusted data</button>
-  </div>
-  <p class="sub" id="ds-note"></p>
-  <div class="explorer">
-    <div class="list" id="list"></div>
-    <div class="detail" id="detail"><p class="empty">Select a decision to see its full record.</p></div>
-  </div>
-</main>
+  <section id="limitations">
+    <h2>Limitations</h2>
+    <div class="prose">
+      <p>Four things these numbers do not show. They are findings, not caveats added after the fact.</p>
+      <p><strong>The recovery lift is conditional on a simulated outcome model.</strong> Whether a retry succeeds is decided by curves written in <code>config/taxonomy.yaml</code> — a sigmoid with a peak probability of 0.55 at a 48-hour midpoint, nudge recovery probabilities between 0.25 and 0.45 — not fitted to production traffic. Note where the advantage lands: the agent's retries that follow no prior nudge succeed at 55%, and the peak probability in that file is 0.55. A substantial part of what this measures is whether an LLM can find the peak of a curve we specified. Real curves vary by issuer, rail, amount band and time of day, and are precisely what Razorpay already optimises with far more data. This is not a production lift estimate.</p>
+      <p><strong>The held-out run used the twelve-invariant gate</strong>, before the provenance rule landed. The thirteenth only downgrades actions, so applying it would move these numbers rather than leave them unchanged, and re-running would mean inspecting the held-out set a second time. The provenance rule is evidenced on the adversarial suite instead.</p>
+      <p><strong>Diagnosis accuracy is degenerate on this corpus.</strong> The gateway-reported reason code equals the true reason for 150 of 150 held-out orders, so the answer is visible in the input and B1 scores 100% by copying a field. The agent's 99.3% therefore means it overrode a correct signal once. The metric measures corruption of a good signal, not diagnostic skill; the generator was deliberately left frozen rather than fixed after results were known.</p>
+      <p><strong>The adversarial trap rates are in-sample.</strong> Two invariants — <code>hard_decline_no_retry</code> and the extended <code>risk_block</code> — were derived from running the same suite against the deterministic baselines, so the gate is partly fitted to those scenarios. Replicates measure model variance rather than coverage: 100 decisions is ten scenario families seen ten times, not a hundred distinct traps.</p>
+    </div>
+  </section>
+
+  <section id="audit">
+    <h2>Audit explorer</h2>
+    <h3>Every decision, including the refusals</h3>
+    <p class="prose">A system that logs only what it did is not auditable. This is the complete decision record from the run: the context the gate saw, what the agent proposed and why, every invariant evaluated, and the disposition. Nothing here is recomputed — it is read from the committed audit trail.</p>
+
+    <div class="controls">
+      <select id="dataset" aria-label="Which run to browse">
+        <option value="holdout">Held-out run — 315 decisions</option>
+        <option value="redteam">Adversarial suite — 110 decisions</option>
+      </select>
+      <div class="filters" id="filters">
+        <button data-d="ALL" class="on">ALL</button
+        ><button data-d="ALLOW">ALLOW</button
+        ><button data-d="MODIFY">MODIFY</button
+        ><button data-d="DENY">DENY</button
+        ><button data-d="UNTRUSTED">CITED UNTRUSTED</button>
+      </div>
+    </div>
+    <p class="ds-note" id="ds-note"></p>
+
+    <div class="explorer">
+      <div class="list" id="list" role="listbox" aria-label="Decisions"></div>
+      <div class="detail" id="detail"><p class="empty">Select a decision to read its full record.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    Read-only viewer over committed run artifacts. No backend and no API keys: the FastAPI service is deliberately not deployed, because its <code>/run</code> endpoint makes live model calls.
+    <a href="https://github.com/Daksha1611/bounded-recovery-engine">Source on GitHub</a>.
+  </footer>
+</div>
 
 <script src="app.js"></script>
 </body>
