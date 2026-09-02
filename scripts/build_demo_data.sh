@@ -74,3 +74,21 @@ json.dump({"retry_targeting": retry_targeting, "recoveries_by_action": by_action
 for k, v in retry_targeting.items():
     print(f"  {k:<6} retries={v['retries_executed']:>3} recovered={v['recovered']:>3} hit={v['hit_rate']:.0%}")
 PY
+
+# Cache-bust the page assets. GitHub Pages serves styles.css / app.js with
+# cache-control: max-age=600, so a browser that loaded the page in the last
+# ten minutes keeps the OLD stylesheet and script against fresh HTML -- the
+# tabs then render as native buttons and don't respond. Stamping a content
+# hash into the reference makes a changed file a different URL, so the
+# browser cannot serve a stale one. Matters most mid-demo.
+python3 - <<'PY'
+import hashlib, pathlib, re
+docs = pathlib.Path("docs")
+html = (docs / "index.html").read_text()
+for asset in ("styles.css", "app.js"):
+    digest = hashlib.sha256((docs / asset).read_bytes()).hexdigest()[:8]
+    html = re.sub(rf'({re.escape(asset)})(\?v=[0-9a-f]+)?', rf'\1?v={digest}', html)
+(docs / "index.html").write_text(html)
+print("  stamped asset versions: " + ", ".join(
+    re.findall(r'(?:styles\.css|app\.js)\?v=[0-9a-f]+', html)))
+PY
