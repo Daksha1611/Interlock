@@ -1,4 +1,6 @@
-# Pitch script — Bounded Recovery Engine
+# Pitch script — Interlock
+
+*A bounded payment-recovery agent that cannot take an unsafe money action.*
 
 **Track 03 — AI Revenue Recovery (Razorpay AI Buildathon)**
 
@@ -8,7 +10,7 @@ Total: 5 minutes across 7 beats. Numbers current as of 2026-09-01.
 
 ## 1. The framing (30s)
 
-> "Razorpay already optimizes retry timing — Optimizer, smart routing, in-session retries, hundreds of millions of data points. That's not our pitch, and we're not claiming we beat it. The open question is what happens the moment you let an LLM, not a rules engine, decide to move someone's money. That system can be confidently, expensively wrong — and 'be careful' in a prompt doesn't prove it isn't. We built the architecture that answers that, and the adversarial harness that proves it holds."
+> "This is Interlock. Razorpay already optimizes retry timing — Optimizer, smart routing, in-session retries, hundreds of millions of data points. That's not our pitch, and we're not claiming we beat it. The open question is what happens the moment you let an LLM, not a rules engine, decide to move someone's money. That system can be confidently, expensively wrong — and 'be careful' in a prompt doesn't prove it isn't. We built the architecture that answers that, and the adversarial harness that proves it holds."
 
 The claim is **not** "this recovers more money." It is: *an LLM can be given authority over money actions and be structurally incapable of taking a wrong one, with every decision auditable and replayable.*
 
@@ -19,6 +21,8 @@ The claim is **not** "this recovers more money." It is: *an LLM can be given aut
 > "We don't assert that separation in a design doc. Four structural tests statically verify it: the agent module has zero import path to the gate or the executor, the world simulator and the agent share no imports, the gate contains no LLM call at all, and exactly one function in the codebase may mutate the money ledger."
 
 Show: `tests/test_isolation.py` — 4 tests, passing.
+
+> "That's where the name comes from. Railway interlocking wires signals and points so that conflicting routes can never be set at the same time — a train can't get a green light onto a track another train has locked. It's safety by construction, not by procedure: nobody is trusting the signalman to remember the rule. The propose/dispose split is the same move. The agent proposes; it cannot also throw the switch."
 
 **The 13th invariant — provenance.** Every context field is tagged TRUSTED (ledger state, reason code, mandate state, amount, timestamps, risk and DNC flags set by compliance systems) or UNTRUSTED (customer notes, display names, order notes, gateway free text). The agent must declare which fields its decision rests on. If a money-moving or contact action cites *any* untrusted field, the gate downgrades it to ESCALATE.
 

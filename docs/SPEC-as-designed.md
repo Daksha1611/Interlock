@@ -1,4 +1,4 @@
-# Bounded Recovery Engine — Specification (as designed)
+# Interlock — Specification (as designed)
 
 > **This is the pre-build design document, checked in unchanged below.** It records
 > what was intended before any code existed, so that the gap between intent and
@@ -14,6 +14,11 @@
 > Keeping the original rather than back-editing it to match the build is the same
 > instinct as the audit trail: a design you can no longer be wrong about is a design
 > you can no longer learn from.
+>
+> **A note on the name.** The project was renamed to *Interlock* after this document
+> was written; the spec below still calls it "Bounded Recovery Engine", its name at
+> the time. That is left as written for the same reason as everything else here —
+> the record stays what it was, not what it became.
 
 ---
 

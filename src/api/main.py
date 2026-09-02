@@ -15,7 +15,7 @@ from api.routes import run as run_routes
 from api.routes import runs as runs_routes
 
 app = FastAPI(
-    title="Bounded Recovery Engine",
+    title="Interlock",
     description=(
         "A payment-recovery agent that proposes; a deterministic policy gate disposes. "
         "See /run, /runs/{run_id}, /audit/{run_id}/{decision_id}, /compare."
@@ -32,6 +32,6 @@ app.include_router(compare_routes.router)
 @app.get("/")
 def root():
     return {
-        "name": "Bounded Recovery Engine",
+        "name": "Interlock",
         "endpoints": ["/run", "/runs/{run_id}", "/audit/{run_id}/{decision_id}", "/compare", "/docs"],
     }

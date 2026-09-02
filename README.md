@@ -1,8 +1,10 @@
-# Bounded Recovery Engine
+# Interlock
+
+*A bounded payment-recovery agent that cannot take an unsafe money action.*
 
 **Track 03 — AI Revenue Recovery · Razorpay AI Buildathon**
 
-An LLM proposes payment-recovery actions. A deterministic policy gate — ordinary Python reading a YAML file, no model call, no prompt — is the only path to moving money or contacting a customer. Every decision, including every refusal, is logged and replayable offline.
+Railway interlocking wires signals and points so that conflicting routes can never be set at the same time — safety by construction, not by procedure. The same structure here: an LLM proposes a payment-recovery action, a deterministic policy gate — ordinary Python reading a YAML file, no model call, no prompt — is the only path to moving money or contacting a customer, and the agent has no import path to the executor. Every decision, including every refusal, is logged and replayable offline.
 
 **[▶ Live results and audit explorer](https://daksha1611.github.io/bounded-recovery-engine/)** — browse all 315 held-out decisions: the context the gate saw, what the agent proposed and why, every invariant evaluated, and the disposition. Read-only, no backend, no keys.
 

@@ -3,15 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bounded Recovery Engine — results and audit trail</title>
-<meta name="description" content="An LLM proposes payment-recovery actions; a deterministic gate disposes. Results and full audit trail from the held-out evaluation.">
-<link rel="stylesheet" href="styles.css?v=23d7d2d6">
+<title>Interlock — results and audit trail</title>
+<meta name="description" content="A bounded payment-recovery agent that cannot take an unsafe money action. Results and full audit trail from the held-out evaluation.">
+<link rel="stylesheet" href="styles.css?v=8b972df7">
 </head>
 <body>
 
 <div class="wrap">
   <header>
-    <h1>Bounded Recovery Engine</h1>
+    <h1>Interlock</h1>
+    <p class="tagline">A bounded payment-recovery agent that cannot take an unsafe money action.</p>
     <p class="thesis">An LLM proposes payment-recovery actions. A deterministic policy gate — ordinary Python reading a YAML file, no model call — is the only path to moving money. Every decision, including every refusal, is logged and replayable offline.</p>
     <div class="status" id="status">Loading run artifacts…</div>
   </header>

@@ -29,7 +29,8 @@ body{
 
 /* ---------- header ---------- */
 header{padding:64px 0 30px}
-h1{font-size:37px;line-height:1.15;font-weight:600;margin:0 0 10px;letter-spacing:-.012em}
+h1{font-size:37px;line-height:1.15;font-weight:600;margin:0 0 6px;letter-spacing:-.012em}
+.tagline{font-size:16.5px;font-style:italic;color:var(--ink-3);margin:0 0 16px}
 .thesis{font-size:19px;line-height:1.5;color:var(--ink-2);margin:0;max-width:64ch}
 .status{
   margin-top:22px;padding-top:16px;border-top:1px solid var(--rule);
