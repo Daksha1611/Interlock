@@ -55,7 +55,7 @@ async function boot() {
     showError(e, "the run results");
     return;
   }
-  renderStatus(); renderResults();
+  renderStatus(); renderResults(); initTabs();
   $("dataset").onchange = (e) => { curSet = e.target.value; curSel = null; loadDecisions(); };
   $("filters").querySelectorAll("button").forEach((b) => {
     b.onclick = () => {
@@ -64,6 +64,27 @@ async function boot() {
     };
   });
   loadDecisions();
+}
+
+/* ---------------- tabs ---------------- */
+
+function showTab(which, push) {
+  const isResults = which !== "audit";
+  $("panel-results").hidden = !isResults;
+  $("panel-audit").hidden = isResults;
+  $("tab-results").setAttribute("aria-selected", String(isResults));
+  $("tab-audit").setAttribute("aria-selected", String(!isResults));
+  if (push && location.hash !== (isResults ? "#results" : "#audit")) {
+    history.replaceState(null, "", isResults ? "#results" : "#audit");
+  }
+  window.scrollTo(0, 0);
+}
+
+function initTabs() {
+  $("tab-results").onclick = () => showTab("results", true);
+  $("tab-audit").onclick = () => showTab("audit", true);
+  showTab(location.hash === "#audit" ? "audit" : "results", false);
+  window.addEventListener("hashchange", () => showTab(location.hash === "#audit" ? "audit" : "results", false));
 }
 
 /* ---------------- header status ---------------- */

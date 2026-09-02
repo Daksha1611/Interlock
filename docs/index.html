@@ -14,16 +14,17 @@
     <h1>Bounded Recovery Engine</h1>
     <p class="thesis">An LLM proposes payment-recovery actions. A deterministic policy gate — ordinary Python reading a YAML file, no model call — is the only path to moving money. Every decision, including every refusal, is logged and replayable offline.</p>
     <div class="status" id="status">Loading run artifacts…</div>
-    <nav>
-      <a href="#results">Results</a>
-      <a href="#limitations">Limitations</a>
-      <a href="#audit">Audit explorer</a>
-      <a href="https://github.com/Daksha1611/bounded-recovery-engine">Source</a>
-    </nav>
   </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-results" aria-selected="true" aria-controls="panel-results">Results</button>
+    <button role="tab" id="tab-audit" aria-selected="false" aria-controls="panel-audit">Audit explorer</button>
+    <a class="src" href="https://github.com/Daksha1611/bounded-recovery-engine">Source</a>
+  </nav>
 
   <div id="error-slot"></div>
 
+  <div id="panel-results" role="tabpanel" aria-labelledby="tab-results">
   <section id="results">
     <h2>Results</h2>
     <h3>Like-for-like: retry targeting</h3>
@@ -59,7 +60,9 @@
       <p><strong>The adversarial trap rates are in-sample.</strong> Two invariants — <code>hard_decline_no_retry</code> and the extended <code>risk_block</code> — were derived from running the same suite against the deterministic baselines, so the gate is partly fitted to those scenarios. Replicates measure model variance rather than coverage: 100 decisions is ten scenario families seen ten times, not a hundred distinct traps.</p>
     </div>
   </section>
+  </div>
 
+  <div id="panel-audit" role="tabpanel" aria-labelledby="tab-audit" hidden>
   <section id="audit">
     <h2>Audit explorer</h2>
     <h3>Every decision, including the refusals</h3>
@@ -85,6 +88,7 @@
       <div class="detail" id="detail"><p class="empty">Select a decision to read its full record.</p></div>
     </div>
   </section>
+  </div>
 
   <footer>
     Read-only viewer over committed run artifacts. No backend and no API keys: the FastAPI service is deliberately not deployed, because its <code>/run</code> endpoint makes live model calls.
