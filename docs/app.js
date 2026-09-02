@@ -21,12 +21,14 @@ const TRUSTED = new Set(["reason", "rail", "amount", "occurred_at", "attempt_num
 const isUntrusted = (f) => !TRUSTED.has(f);
 
 function table(caption, head, rows, leadIdx) {
+  // width class follows column count — see styles.css
+  const w = head.length <= 4 ? "w-s" : head.length <= 6 ? "w-m" : "w-l";
   const th = head.map((h) => `<th class="${h.num ? "num" : ""}">${esc(h.label ?? h)}</th>`).join("");
   const tb = rows.map((r, i) =>
     `<tr class="${i === leadIdx ? "lead" : ""}">` +
     r.map((c, j) => `<td class="${j === 0 ? "" : "num"} ${c && c.cls ? c.cls : ""}">${c && c.html !== undefined ? c.html : esc(c)}</td>`).join("") +
     `</tr>`).join("");
-  return `<table>${caption ? `<caption>${esc(caption)}</caption>` : ""}<thead><tr>${th}</tr></thead><tbody>${tb}</tbody></table>`;
+  return `<table class="${w}">${caption ? `<caption>${esc(caption)}</caption>` : ""}<thead><tr>${th}</tr></thead><tbody>${tb}</tbody></table>`;
 }
 
 let HOLDOUT, DERIVED, DECISIONS = {}, curSet = "holdout", curFilter = "ALL", curSel = null;
