@@ -121,6 +121,28 @@ agent/  (proposes)  ──Action──▶  gate/  (disposes)  ──▶  executo
    no import path to gate/ ─────────┘  (enforced by tests/test_isolation.py)
 ```
 
+The gate's decision logic — every proposal ends in exactly one of ALLOW / DENY / MODIFY, and provenance is judged before any autofix rewrites the action:
+
+```mermaid
+flowchart LR
+    A["agent proposes\nan action"] --> B{"any of 12 invariants fail?\nattempt cap · mandate cap · cooling-off\nrisk block · hard-decline · settled ledger\nrefund/dispute lock · do-not-contact\ncontact frequency · quiet hours · amount ceiling"}
+    B -- yes --> C["DENY\nnothing executes"]
+    B -- no --> D{"provenance trusted?\n(13th invariant)"}
+    D -- no --> E["MODIFY\ndowngrade to ESCALATE\nrouted to a human"]
+    D -- yes --> F{"autofix needed?\nreschedule around quiet hours\nor contact frequency"}
+    F -- yes --> G["MODIFY\nrescheduled, executes as adjusted"]
+    F -- no --> H["ALLOW\nexecutes as proposed"]
+    G --> I["gate/executor.py\nonly caller of money-moving code"]
+    H --> I
+    C --> J["logged, replayable\nno executor call"]
+    E --> J
+
+    style C fill:#a3291d,color:#fff,stroke:#a3291d
+    style E fill:#8a5510,color:#fff,stroke:#8a5510
+    style G fill:#8a5510,color:#fff,stroke:#8a5510
+    style H fill:#2f6b3d,color:#fff,stroke:#2f6b3d
+```
+
 Structural guarantees, enforced by `tests/test_isolation.py` — verified statically, not asserted in prose:
 
 - `agent/` has no import path to `gate/` or `world/`.
@@ -218,6 +240,15 @@ uvicorn api.main:app --app-dir src --reload    # or: docker compose up --build
 
 - **[`PITCH.md`](PITCH.md)** — the 5-minute pitch script, seven beats, with the full decomposition and every caveat.
 - **[`docs/SPEC-as-designed.md`](docs/SPEC-as-designed.md)** — the pre-build design document, checked in unchanged, with a *What changed, and why* section accounting for every divergence between intent and build.
+
+### References
+
+Four papers this project's evaluation design and threat model borrow from directly — cited inline where they apply, indexed here for the panel:
+
+- Künzel, S. R. et al. **"Metalearners for estimating heterogeneous treatment effects using machine learning."** *PNAS*, 2019. — the T-/X-learner framing behind the not-built B2 uplift baseline (§`Results`, `Not built`).
+- Debenedetti, E. et al. **"AgentDojo: A Dynamic Environment to Evaluate Prompt Injection Attacks and Defenses for LLM Agents."** *NeurIPS*, 2024. — motivates measuring recovery under an adversarial suite, not only on a clean corpus (`PITCH.md`).
+- Ruan, Y. et al. **"Identifying the Risks of LM Agents with an LM-Emulated Sandbox"** (ToolEmu). *ICLR*, 2024. — motivates severity-tiered violations instead of a flat count (`PITCH.md`, `src/eval/metrics.py`).
+- Debenedetti, E. et al. **"Defeating Prompt Injections by Design"** (CaMeL), 2025. — the structural-isolation argument that provenance tracking alone (capability isolation) isn't sufficient without also constraining what untrusted data can *justify* — the basis for the 13th invariant (`docs/SPEC-as-designed.md`).
 
 ### Design notes worth knowing before the panel
 
