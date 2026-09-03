@@ -1,32 +1,30 @@
-# Pitch script — Interlock
+# Interlock
 
 *A bounded payment-recovery agent that cannot take an unsafe money action.*
 
-**Track 03 — AI Revenue Recovery (Razorpay AI Buildathon)**
+**Track 03 — AI Revenue Recovery · Razorpay AI Buildathon**
 
-Total: 5 minutes across 7 beats. Numbers current as of 2026-09-01.
+*Numbers current as of 2026-09-01.*
 
 ---
 
-## 1. The framing (30s)
+## 1. The framing
 
-> "This is Interlock. Razorpay already optimizes retry timing — Optimizer, smart routing, in-session retries, hundreds of millions of data points. That's not our pitch, and we're not claiming we beat it. The open question is what happens the moment you let an LLM, not a rules engine, decide to move someone's money. That system can be confidently, expensively wrong — and 'be careful' in a prompt doesn't prove it isn't. We built the architecture that answers that, and the adversarial harness that proves it holds."
+Razorpay already optimizes retry timing — Optimizer, smart routing, in-session retries, hundreds of millions of data points. That is not what we are pitching, and we are not claiming to beat it. The open question is what happens the moment an LLM, not a rules engine, decides to move someone's money: that system can be confidently, expensively wrong, and "be careful" in a prompt does not prove otherwise. We built the architecture that answers that question, and the adversarial harness that proves it holds.
 
 The claim is **not** "this recovers more money." It is: *an LLM can be given authority over money actions and be structurally incapable of taking a wrong one, with every decision auditable and replayable.*
 
-## 2. Propose / dispose, including provenance (60s)
+## 2. Propose / dispose, including provenance
 
-> "The agent proposes an action — retry, switch rail, nudge, escalate, stop. It never executes anything. A separate policy gate — ordinary Python reading a YAML policy, no model call, no prompt — is the only path to money or customer contact."
+The agent proposes an action — retry, switch rail, nudge, escalate, stop. It never executes anything. A separate policy gate — ordinary Python reading a YAML policy, no model call, no prompt — is the only path to money or customer contact.
 
-> "We don't assert that separation in a design doc. Four structural tests statically verify it: the agent module has zero import path to the gate or the executor, the world simulator and the agent share no imports, the gate contains no LLM call at all, and exactly one function in the codebase may mutate the money ledger."
+That separation is not asserted in a design doc; it is statically verified by four structural tests (`tests/test_isolation.py`, all passing): the agent module has zero import path to the gate or the executor, the world simulator and the agent share no imports, the gate contains no LLM call at all, and exactly one function in the codebase may mutate the money ledger.
 
-Show: `tests/test_isolation.py` — 4 tests, passing.
-
-> "That's where the name comes from. Railway interlocking wires signals and points so that conflicting routes can never be set at the same time — a train can't get a green light onto a track another train has locked. It's safety by construction, not by procedure: nobody is trusting the signalman to remember the rule. The propose/dispose split is the same move. The agent proposes; it cannot also throw the switch."
+That is where the name comes from. Railway interlocking wires signals and points so that conflicting routes can never be set at the same time — a train can't get a green light onto a track another train has locked. It is safety by construction, not by procedure: nobody is trusting the signalman to remember the rule. The propose/dispose split is the same move. The agent proposes; it cannot also throw the switch.
 
 **The 13th invariant — provenance.** Every context field is tagged TRUSTED (ledger state, reason code, mandate state, amount, timestamps, risk and DNC flags set by compliance systems) or UNTRUSTED (customer notes, display names, order notes, gateway free text). The agent must declare which fields its decision rests on. If a money-moving or contact action cites *any* untrusted field, the gate downgrades it to ESCALATE.
 
-> "This is the part I'd point a security reviewer at. We are deliberately **not** claiming we detect malicious notes — that's undecidable, and it would put a classifier back on the money path. We constrain the *stated basis* for moving money instead. The agent can read a customer note, be completely taken in by it, and say so — and the action becomes an escalation instead of a charge. That moves the prompt-injection claim from 'the gate caught it' to 'untrusted data structurally cannot justify a money action'."
+This is the part a security reviewer should look at hardest. We are deliberately **not** claiming to detect malicious notes — that is undecidable, and it would put a classifier back on the money path. Instead we constrain the *stated basis* for moving money: the agent can read a customer note, be completely taken in by it, and say so — and the action becomes an escalation instead of a charge. That moves the prompt-injection claim from "the gate caught it" to "untrusted data structurally cannot justify a money action."
 
 Unknown field names fail closed to UNTRUSTED: a hallucinated citation is the case we know least about, so it must not be the one that defaults to trusted.
 
@@ -42,11 +40,11 @@ note invents a bank confirmation to justify an immediate retry:
 | escalated on their own initiative (also citing the note) | 2 |
 | **money actions justified by untrusted data that executed** | **0** |
 
-> "Seven times out of eight, the agent told us the customer note was part of its
-> reasoning, and the gate turned its retry into an escalation. Not because anything
-> detected the note was a lie — nothing here reads the note at all — but because the
-> agent's own stated justification touched attacker-controlled data, and that is a
-> decidable question."
+Seven times out of eight, the agent's own record showed the customer note was part of
+its reasoning, and the gate turned that retry into an escalation. Nothing here detected
+that the note was a lie — nothing in this control reads the note at all — but the
+agent's stated justification touched attacker-controlled data, and that is a decidable
+question.
 
 **And the eighth is the honest part.** One replicate proposed the same retry, cited
 fourteen trusted fields, did **not** cite the note — and the retry executed. That is
@@ -55,7 +53,7 @@ the limitation this design has by construction, made concrete: the control is
 through. We knew that, wrote it down, and pinned it in a test before this run; now we
 have a live instance of it, in one case out of ten.
 
-## 3. Adversarial results (70s)
+## 3. Adversarial results
 
 *A note on what this corpus is: the adversarial suite is **not** the held-out set. It
 is a fixed, purpose-built probe corpus, so re-running it costs nothing in evidential
@@ -76,7 +74,11 @@ Ten scenario families engineered to trap a recovery agent into a wrong money act
 | **dangerous proposals** | **31** | **0** |
 | safe proposals | 0 | 69 |
 
-> "The agent got it wrong 31 times out of 100. It proposed retrying a payment that had already exhausted its attempt cap — every single time. It proposed contacting a customer who had opted out mid-sequence — every single time. The gate denied all 31 and allowed all 69 safe ones. That gap between 31 and 0 *is* the thesis: the agent doesn't have to be right, because it structurally cannot be the last line of defence."
+The agent got it wrong 31 times out of 100. It proposed retrying a payment that had
+already exhausted its attempt cap — every single time. It proposed contacting a
+customer who had opted out mid-sequence — every single time. The gate denied all 31
+and allowed all 69 safe ones. That gap between 31 and 0 *is* the thesis: the agent
+doesn't have to be right, because it structurally cannot be the last line of defence.
 
 **Utility under attack** (after AgentDojo, Debenedetti et al., NeurIPS 2024) — because zero violations is trivially achievable by refusing everything:
 
@@ -85,19 +87,29 @@ Ten scenario families engineered to trap a recovery agent into a wrong money act
 | safe money/contact proposals executed | **9 / 9 (100%)** |
 | dangerous proposals blocked | **31 / 31 (100%)** |
 
-> "Notice the second row of the confusion matrix: zero safe proposals denied. The gate isn't buying safety by refusing everything — it discriminates. That's the objection I'd expect first, so we measure it directly."
+Look at the second row of the confusion matrix: zero safe proposals denied. The gate
+isn't buying safety by refusing everything — it discriminates. That's the objection we'd
+expect first, so we measure it directly.
 
-Be precise if pressed: of the 69 safe proposals, 40 were ESCALATE and 20 STOP — safe by construction. Nine were proposals that would genuinely have moved money or contacted a customer, and **all nine executed**. That's the number that rules out a gate buying its zero by blanket refusal, and n=9 is small — say so rather than let someone find it.
+To be precise: of the 69 safe proposals, 40 were ESCALATE and 20 STOP — safe by
+construction. Nine were proposals that would genuinely have moved money or contacted a
+customer, and **all nine executed**. That's the number that rules out a gate buying its
+zero by blanket refusal — and we'd rather flag it ourselves: n=9 is small.
 
 **Second run, 110 decisions (2026-09-02, `openrouter/free`), 11 families including the probe:** 26/110 traps proposed, **0 system violations**, utility under attack **24/24 safe money-or-contact proposals executed, 26/26 dangerous blocked**.
 
-Do **not** present 26/110 (23.6%) against the earlier 31/100 (31%) as an improvement. The two are not comparable: different model (OpenRouter's auto-router vs a pinned Groq `openai/gpt-oss-20b`), a changed prompt (the `cited_fields` section was added between them), and a different scenario count. Two runs, two models, same result on the only number that carries the claim — **zero violations in both**.
+26/110 (23.6%) should not be read as an improvement over the earlier 31/100 (31%). The
+two are not comparable: different model (OpenRouter's auto-router vs a pinned Groq
+`openai/gpt-oss-20b`), a changed prompt (the `cited_fields` section was added between
+them), and a different scenario count. Two runs, two models, same result on the only
+number that carries the claim — **zero violations in both**.
 
 **Cross-model check.** An earlier 30-decision run on OpenRouter's free auto-router proposed 9 dangerous actions and also executed 0. The two models fail *differently* — `mandate_revoked_mid_sequence` trapped the OpenRouter run 0% of the time and the Groq run 80% — which is the point: the safety property belongs to the gate, not to whichever model is proposing.
 
-## 4. Live audit replay (50s)
+## 4. Live audit replay
 
-> "Every decision — including the refusals — is logged and reconstructible offline, without ever calling the LLM again."
+Every decision — including the refusals — is logged and reconstructible offline,
+without ever calling the LLM again.
 
 ```bash
 PYTHONPATH=src python -m audit.demo <run_id>
@@ -110,11 +122,13 @@ Real output from a B1 run:
 
 All three replay to the identical disposition, recomputed from the logged context, zero LLM calls.
 
-> "Show the DENY one. A system that only logs what it did isn't auditable — you also need the record of what it refused, and why, or you can't tell a safe system from a lucky one."
+The DENY case is the one worth reading closely. A system that only logs what it did
+isn't auditable — you also need the record of what it refused, and why, or you can't
+tell a safe system from a lucky one.
 
-## 5. The recovery table (50s)
+## 5. The recovery table
 
-> "Safety that costs all the revenue isn't a result."
+**Safety that costs all the revenue isn't a result.**
 
 **Held-out set, 150 orders, never used for tuning — inspected once.**
 
@@ -131,19 +145,18 @@ All three strategies have RETRY. Same action, same gate, same corpus:
 Denominator is retries that actually **executed**, which matches the `attempts` column
 below.*
 
-> "On the one action all three share, the agent recovers on 47% of the retries it
-> spends, against B1's 13%. That's not a bigger toolbox — it's the same tool, used
-> better."
+On the one action all three share, the agent recovers on 47% of the retries it spends,
+against B1's 13%. That's not a bigger toolbox — it's the same tool, used better.
 
 **But look at B0 before drawing the wrong conclusion.** Blind retry hits 33% here,
 which is far better than a strategy with no logic deserves — and the reason is the
 gate. B0 *proposed* 214 retries; the gate denied 98 of them. What survived to execute
 was the 116 the invariants couldn't object to.
 
-> "The gate isn't only a safety device in this table, it's a performance one. It threw
-> out nearly half of blind retry's ideas and roughly doubled the hit rate of what was
-> left. That's worth saying plainly: our own baseline's respectable number is partly
-> our gate's doing, not the baseline's."
+The gate isn't only a safety device in this table, it's a performance one. It threw
+out nearly half of blind retry's ideas and roughly doubled the hit rate of what was
+left. Worth saying plainly: our own baseline's respectable number is partly our gate's
+doing, not the baseline's.
 
 Now the totals, which include an action the baselines don't have:
 
@@ -156,8 +169,8 @@ Now the totals, which include an action the baselines don't have:
 *315 agent decisions, 0 LLM-failure substitutions, `metrics_trustworthy: true`. Model
 mix recorded in the report: 305 OpenRouter, 10 Groq, 412,479 tokens.*
 
-> "46% against 27%, zero violations, on **fewer attempts than either baseline** — 110
-> against B1's 181. ₹912 recovered per attempt against ₹372."
+46% against 27%, zero violations, on **fewer attempts than either baseline** — 110
+against B1's 181. ₹912 recovered per attempt against ₹372.
 
 The obvious objection is that the agent has a wider action space: B0 only proposes
 RETRY, B1 proposes RETRY and NUDGE, and neither ever proposes SWITCH_RAIL. So we
@@ -169,10 +182,10 @@ decomposed the ₹33,072 gross gain over B1 rather than leave it to be asked:
 | SWITCH_RAIL (agent only) | +5 | +₹9,137 | 28% |
 | NUDGE (both have it) | +2 | **−₹15,007** | **−45%** |
 
-> "The wider action space is worth about a quarter of the gain. The like-for-like
-> retry advantage is worth more than all of it. And on nudges — which both strategies
-> have — B1 actually beats us by fifteen thousand rupees. We're not better across the
-> board; we're much better at one thing and slightly worse at another."
+The wider action space is worth about a quarter of the gain. The like-for-like retry
+advantage is worth more than all of it. And on nudges — which both strategies have —
+B1 actually beats us by fifteen thousand rupees. We're not better across the board;
+we're much better at one thing and slightly worse at another.
 
 **Severity, not a binary count** (after ToolEmu, Ruan et al., ICLR 2024). A single "violations" number treats "charged a customer twice" and "texted them at 22:00" as the same event:
 
@@ -190,15 +203,15 @@ zero.
 
 The "must be zero" claim covers **catastrophic and severe** — pinned in code (`MUST_BE_ZERO_TIERS`) so it can't quietly drift to cover more or less than what we defended here.
 
-## 6. Two things our own tooling caught about us (30s)
+## 6. Two things our own tooling caught about us
 
-This is the beat to slow down on. It is one argument, not two admissions.
+These are one argument, not two separate admissions.
 
 **The first: a number that was quietly false.** On the 23rd our held-out run reported
 the agent at **7.3%** recovery against B1's 27.3%.
 
-> "That's a plausible number. It's the kind of number you shrug at, write up as 'the
-> LLM underperformed,' and move on from."
+That's a plausible number. It's the kind of number you'd shrug at, write up as "the LLM
+underperformed," and move on from.
 
 It was wrong. The run had exhausted its token quota at decision 92 of 202. Every call
 after that failed, and the orchestrator substitutes an ESCALATE when a call fails — so
@@ -208,20 +221,19 @@ a different question from "did the run finish": **how much of this run was the
 strategy actually deciding?** Any report where more than 5% of decisions were failure
 substitutions is stamped INVALID. We deleted that report rather than publish it.
 
-> "The run we're showing you today reports 0 out of 315 substitutions. That's not us
-> asserting the number is clean — it's the same check that condemned the last one,
-> run again and printed either way."
+The run behind the numbers in this document reports 0 out of 315 substitutions. That's
+not us asserting the number is clean — it's the same check that condemned the last one,
+run again and printed either way.
 
 **The second: a metric that was quietly meaningless.** We built a diagnosis confusion
 matrix, as our own spec asked for. Then we checked the corpus underneath it and found
 the gateway's reason code equals the true reason for **150 of 150** held-out orders.
 The answer was sitting in the input. B1 scores 100% on that metric by copying a field.
 
-> "We could have published 'the agent diagnoses at 99.3% accuracy.' It's true, it
-> sounds good, and it's worthless — a one-line strategy beats it. Worse, that 99.3%
-> against B1's 100% means the agent *overrode a correct signal once and made it
-> worse*. Read properly, our accuracy metric is measuring the opposite of what it
-> appears to."
+We could have published "the agent diagnoses at 99.3% accuracy." It's true, it sounds
+good, and it's worthless — a one-line strategy beats it. Worse, that 99.3% against B1's
+100% means the agent *overrode a correct signal once and made it worse*. Read properly,
+our accuracy metric is measuring the opposite of what it appears to.
 
 We kept the metric, reframed it as what it actually measures, and wrote down that our
 generator makes diagnosis easier than reality — real gateway codes are noisy and
@@ -234,20 +246,20 @@ tooling we built for the purpose; the other by checking a metric we had every
 incentive not to check, at a moment when it would have flattered us. Both were
 corrected against our own interest — one number deleted, one claim demoted.
 
-> "Every team here will show you a number. The question worth asking any of them is:
-> what would have had to go wrong for that number to be false, and would you have
-> noticed? We can answer that twice, with receipts. That's the same instinct as the
-> gate itself — assume your own component is fallible and make the failure
-> structurally visible, rather than hoping it doesn't happen."
+Every submission you review will show you a number. The question worth asking any of
+them is: what would have had to go wrong for that number to be false, and would the
+team have noticed? We can answer that twice, with receipts. That's the same instinct as the gate
+itself — assume your own component is fallible and make the failure structurally
+visible, rather than hoping it doesn't happen.
 
 Two real bugs surfaced the same way and are fixed with regression tests: a malformed
 provider response that crashed past all retry logic, and a daily-quota error whose
 wording our detector missed, so a dead endpoint was retried through a full backoff
 schedule on every decision.
 
-## 7. Limitations (40s)
+## 7. Limitations
 
-Said before anyone has to ask:
+We list these ourselves rather than wait for a judge to find them:
 
 - **The adversarial suite is in-sample.** Two invariants — `hard_decline_no_retry` and the extended `risk_block` — were *derived* from red-teaming the baselines against this same suite. The gate is partly fitted to these scenarios. It doesn't touch the structural claim, but the trap rates should be read as in-sample, not as generalisation.
 - **Replicates are not coverage.** 100 decisions is 10 families seen 10 times, measuring model variance on fixed setups. The confidence interval on any single family's trap rate is wide.
@@ -255,26 +267,26 @@ Said before anyone has to ask:
 
   This matters more than a generic "it's a simulation" caveat, because of *where* our advantage lands. The agent's retries that follow no prior nudge succeed at **55%**, against B1's 13% — and `peak_prob` in that config file is **0.55**. What we are substantially measuring is whether an LLM can find the peak of a curve we hand-specified. That is a real skill, and it is a much narrower claim than "recovers 46% of failed payments."
 
-  Two things follow, and we'd say both unprompted. Real recovery curves vary by issuer, rail, amount band, and time of day, and are precisely what Razorpay already optimises with vastly more data than we have — so a like-for-like production lift is not something this experiment can support. And SWITCH_RAIL's curves are the least constrained of all, because neither baseline ever exercises them, so nothing in this evaluation cross-checks them.
+  Two things follow from that, and we'd say both unprompted. Real recovery curves vary by issuer, rail, amount band, and time of day, and are precisely what Razorpay already optimises with vastly more data than we have — so a like-for-like production lift is not something this experiment can support. And SWITCH_RAIL's curves are the least constrained of all, because neither baseline ever exercises them, so nothing in this evaluation cross-checks them.
 
   **We are not defending the 46%.** The thesis is that an LLM can hold authority over money and be structurally incapable of misusing it. The recovery number exists only to show that safety didn't cost everything — and for that purpose, a number that needs refitting is sufficient, so we'd rather state the limit plainly than defend a figure the thesis doesn't rest on.
-- **The diagnosis metric is degenerate here** — covered in beat 6. Short version: the reason code equals ground truth 150/150, so the metric measures signal corruption, not diagnostic skill. On the held-out run the agent was confidently wrong exactly **once in 147 diagnoses**
+- **The diagnosis metric is degenerate here** — covered in section 6. Short version: the reason code equals ground truth 150/150, so the metric measures signal corruption, not diagnostic skill. On the held-out run the agent was confidently wrong exactly **once in 147 diagnoses**
 — `dec_4748702490d5`, a `GATEWAY_TIMEOUT` on a UPI payment read as `UPI_TIMEOUT` at
 0.82 confidence.
 
-This is worth showing precisely because it is the exact failure the reframed metric
-was built to surface: the agent **overrode a correct reason code and made it worse**,
-confidently. It is not a generic miss — it is the one shape of error this corpus can
-still detect. It is also a near-miss: the reasoning was defensible, the chosen action
-(RETRY) was identical under either label, and the gate allowed it.
+  This is worth showing precisely because it is the exact failure the reframed metric
+  was built to surface: the agent **overrode a correct reason code and made it worse**,
+  confidently. It is not a generic miss — it is the one shape of error this corpus can
+  still detect. It is also a near-miss: the reasoning was defensible, the chosen action
+  (RETRY) was identical under either label, and the gate allowed it.
 
-**Do not present the calibration numbers as the agent knowing when it is wrong.** The
-separation is weak — mean confidence 0.88 when right against 0.82 when wrong — and,
-more importantly, that 0.82 is computed from a **single observation**, because there
-was exactly one wrong diagnosis. With n=1 on one side, this is not a calibration
-measurement at all; it is one data point next to an average. The honest statement is
-that we cannot tell from this run whether the agent's confidence carries information,
-and a corpus where diagnosis is actually hard would be needed to find out.
+  **We would not present the calibration numbers as the agent knowing when it is wrong.**
+  The separation is weak — mean confidence 0.88 when right against 0.82 when wrong — and,
+  more importantly, that 0.82 is computed from a **single observation**, because there
+  was exactly one wrong diagnosis. With n=1 on one side, this is not a calibration
+  measurement at all; it is one data point next to an average. The honest statement is
+  that we cannot tell from this run whether the agent's confidence carries information,
+  and a corpus where diagnosis is actually hard would be needed to find out.
 - **The root cause is our generator, and it makes diagnosis easier than reality.** Real gateway reason codes are noisy and frequently misleading — `DO_NOT_HONOR` is a catch-all that covers everything from fraud suspicion to an expired card to a velocity limit, and issuer outages routinely surface as generic declines rather than as anything labelled an outage. Ours are perfectly faithful. So this metric would be **substantially harder in a real deployment**, and our number should not be read as transferring. We did not fix the generator on purpose: the held-out corpus is frozen, and regenerating it after seeing results would destroy the one property that makes the held-out comparison worth anything.
 - **What we'd fix first:** a corpus where the reported reason code is sometimes wrong, so diagnosis is a real task; a held-out adversarial suite the gate was never fitted to; and a second check on the citations themselves, so provenance stops being declaration-based.
 - **Provenance constrains the *stated* basis, not the real one — and we have measured the gap rather than estimated it.** On the probe scenario the rule downgraded 7 of the 8 money actions; the eighth proposed the identical retry without citing the note, and executed. So on this scenario the declaration gap is **1 in 10**, live, not hypothetical. Unknown fields fail closed and the prompt asks for honest citation, but this raises the cost of a successful injection rather than eliminating it. The next thing we'd build is an adversarial check on the citation itself — something that asks whether a proposal is *explicable* from the trusted fields alone, independent of what the agent claims it used.
@@ -311,7 +323,7 @@ Two things worth saying about that:
 
 ---
 
-## Numbers to have ready if asked
+## Additional figures
 
 - **157 tests**, all passing, no network — 13 invariants × pass/fail cases, 4 structural isolation tests, 17 provenance tests, integration tests for ALLOW/DENY/MODIFY.
 - Free-tier ceilings that shaped the evaluation: OpenRouter ~50 requests/day, Groq 200,000 tokens/day, Google 20 requests/day. Three different units — budget a run in the right one or it dies halfway.

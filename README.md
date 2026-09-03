@@ -238,7 +238,7 @@ uvicorn api.main:app --app-dir src --reload    # or: docker compose up --build
 
 ## Further reading
 
-- **[`PITCH.md`](PITCH.md)** — the 5-minute pitch script, seven beats, with the full decomposition and every caveat.
+- **[`PITCH.md`](PITCH.md)** — the full argument in seven parts: the thesis, the adversarial evidence, the recovery decomposition, what our own tooling caught about us, and every caveat.
 - **[`docs/SPEC-as-designed.md`](docs/SPEC-as-designed.md)** — the pre-build design document, checked in unchanged, with a *What changed, and why* section accounting for every divergence between intent and build.
 
 ### References
