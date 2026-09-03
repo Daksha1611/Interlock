@@ -4,7 +4,9 @@
 
 **Track 03 — AI Revenue Recovery · Razorpay AI Buildathon**
 
-*Numbers current as of 2026-09-01.*
+*Numbers current as of 2026-09-01.* Every decision behind them is browsable at the
+**[live results and audit explorer](https://daksha1611.github.io/Interlock/)**; the
+build itself is in [`README.md`](README.md).
 
 ---
 
@@ -89,12 +91,13 @@ doesn't have to be right, because it structurally cannot be the last line of def
 
 Look at the second row of the confusion matrix: zero safe proposals denied. The gate
 isn't buying safety by refusing everything — it discriminates. That's the objection we'd
-expect first, so we measure it directly.
+expect first, so we measure it directly rather than wait for it.
 
-To be precise: of the 69 safe proposals, 40 were ESCALATE and 20 STOP — safe by
-construction. Nine were proposals that would genuinely have moved money or contacted a
-customer, and **all nine executed**. That's the number that rules out a gate buying its
-zero by blanket refusal — and we'd rather flag it ourselves: n=9 is small.
+The composition of that number matters, so here it is in full: of the 69 safe
+proposals, 40 were ESCALATE and 20 STOP — safe by construction. Nine were proposals
+that would genuinely have moved money or contacted a customer, and **all nine
+executed**. Those nine are what rules out a gate buying its zero by blanket refusal.
+Nine is also a small n, and we would rather say so here than have it found.
 
 **Second run, 110 decisions (2026-09-02, `openrouter/free`), 11 families including the probe:** 26/110 traps proposed, **0 system violations**, utility under attack **24/24 safe money-or-contact proposals executed, 26/26 dangerous blocked**.
 
@@ -128,7 +131,8 @@ tell a safe system from a lucky one.
 
 ## 5. The recovery table
 
-**Safety that costs all the revenue isn't a result.**
+Safety that costs all the revenue isn't a result, so here is what the bounded system
+actually recovers.
 
 **Held-out set, 150 orders, never used for tuning — inspected once.**
 
@@ -248,9 +252,9 @@ corrected against our own interest — one number deleted, one claim demoted.
 
 Every submission you review will show you a number. The question worth asking any of
 them is: what would have had to go wrong for that number to be false, and would the
-team have noticed? We can answer that twice, with receipts. That's the same instinct as the gate
-itself — assume your own component is fallible and make the failure structurally
-visible, rather than hoping it doesn't happen.
+team have noticed? We can answer that twice, with receipts. It is the same instinct as
+the gate itself — assume your own component is fallible and make the failure
+structurally visible, rather than hoping it doesn't happen.
 
 Two real bugs surfaced the same way and are fixed with regression tests: a malformed
 provider response that crashed past all retry logic, and a daily-quota error whose
@@ -270,9 +274,7 @@ We list these ourselves rather than wait for a judge to find them:
   Two things follow from that, and we'd say both unprompted. Real recovery curves vary by issuer, rail, amount band, and time of day, and are precisely what Razorpay already optimises with vastly more data than we have — so a like-for-like production lift is not something this experiment can support. And SWITCH_RAIL's curves are the least constrained of all, because neither baseline ever exercises them, so nothing in this evaluation cross-checks them.
 
   **We are not defending the 46%.** The thesis is that an LLM can hold authority over money and be structurally incapable of misusing it. The recovery number exists only to show that safety didn't cost everything — and for that purpose, a number that needs refitting is sufficient, so we'd rather state the limit plainly than defend a figure the thesis doesn't rest on.
-- **The diagnosis metric is degenerate here** — covered in section 6. Short version: the reason code equals ground truth 150/150, so the metric measures signal corruption, not diagnostic skill. On the held-out run the agent was confidently wrong exactly **once in 147 diagnoses**
-— `dec_4748702490d5`, a `GATEWAY_TIMEOUT` on a UPI payment read as `UPI_TIMEOUT` at
-0.82 confidence.
+- **The diagnosis metric is degenerate here** — covered in section 6. Short version: the reason code equals ground truth 150/150, so the metric measures signal corruption, not diagnostic skill. On the held-out run the agent was confidently wrong exactly **once in 147 diagnoses** — `dec_4748702490d5`, a `GATEWAY_TIMEOUT` on a UPI payment read as `UPI_TIMEOUT` at 0.82 confidence.
 
   This is worth showing precisely because it is the exact failure the reframed metric
   was built to surface: the agent **overrode a correct reason code and made it worse**,
