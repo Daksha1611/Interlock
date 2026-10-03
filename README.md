@@ -49,7 +49,7 @@ Severity tiers (catastrophic / severe / moderate): **0 / 0 / 0** for all three s
 
 *RETRY only, SWITCH_RAIL excluded; denominator is retries that executed.*
 
-It targets retries far better — and it uses SWITCH_RAIL, which neither baseline ever proposes, so part of the gap is a wider action space rather than better judgement. Note B0's 33%: blind retry scores better than a strategy with no logic deserves, because the gate denied 98 of the 214 retries it proposed. The gate is doing performance work here, not only safety work. Full decomposition in [`PITCH.md`](PITCH.md) §5.
+It targets retries far better — and it uses SWITCH_RAIL, which neither baseline ever proposes, so part of the gap is a wider action space rather than better judgement. Note B0's 33%: blind retry scores better than a strategy with no logic deserves, because the gate denied 98 of the 214 retries it proposed. The gate is doing performance work here, not only safety work. Full decomposition in [`WRITEUP.md`](WRITEUP.md) §5.
 
 ### Adversarial suite — 100 decisions, one pinned model (2026-08-23)
 
@@ -106,7 +106,7 @@ Stated here rather than left for a reviewer to find. None of these are errors; t
 
 **The adversarial trap rates are in-sample.** The scenario set and the rule set are not fully independent: two invariants — `hard_decline_no_retry` and the extended `risk_block` — were *derived* from running this same suite against the deterministic baselines, so the gate is partly fitted to these scenarios. This does not affect the structural claim (the agent has no import path to the gate), but it makes the suite a weaker test of generalisation than a held-out adversarial set would be. Replicates measure model variance, not coverage: 100 decisions is 10 families seen 10 times, not 100 distinct traps. Both caveats are carried inside the report JSON itself (`methodology`), so they cannot be published without them.
 
-**Not built:** an uplift-optimal classical baseline (B2). Action selection is a CATE problem and the standard tools are the metalearners of Künzel et al., *PNAS* 2019. We do not know whether such a policy would beat the LLM on recovery — it plausibly would. It is named as the most credible threat to these numbers in [`PITCH.md`](PITCH.md), and was skipped up front rather than after seeing the result it would be compared against.
+**Not built:** an uplift-optimal classical baseline (B2). Action selection is a CATE problem and the standard tools are the metalearners of Künzel et al., *PNAS* 2019. We do not know whether such a policy would beat the LLM on recovery — it plausibly would. It is named as the most credible threat to these numbers in [`WRITEUP.md`](WRITEUP.md), and was skipped up front rather than after seeing the result it would be compared against.
 
 ---
 
@@ -236,7 +236,7 @@ uvicorn api.main:app --app-dir src --reload    # or: docker compose up --build
 
 ## Further reading
 
-- **[`PITCH.md`](PITCH.md)** — the full argument in seven parts: the thesis, the adversarial evidence, the recovery decomposition, what our own tooling caught about us, and every caveat.
+- **[`WRITEUP.md`](WRITEUP.md)** — the full argument in seven parts: the thesis, the adversarial evidence, the recovery decomposition, what our own tooling caught about us, and every caveat.
 - **[`docs/SPEC-as-designed.md`](docs/SPEC-as-designed.md)** — the pre-build design document, checked in unchanged, with a *What changed, and why* section accounting for every divergence between intent and build.
 
 ### References
@@ -244,8 +244,8 @@ uvicorn api.main:app --app-dir src --reload    # or: docker compose up --build
 Four papers this project's evaluation design and threat model borrow from directly — cited inline where they apply, indexed here:
 
 - Künzel, S. R. et al. **"Metalearners for estimating heterogeneous treatment effects using machine learning."** *PNAS*, 2019. — the T-/X-learner framing behind the not-built B2 uplift baseline (§`Results`, `Not built`).
-- Debenedetti, E. et al. **"AgentDojo: A Dynamic Environment to Evaluate Prompt Injection Attacks and Defenses for LLM Agents."** *NeurIPS*, 2024. — motivates measuring recovery under an adversarial suite, not only on a clean corpus (`PITCH.md`).
-- Ruan, Y. et al. **"Identifying the Risks of LM Agents with an LM-Emulated Sandbox"** (ToolEmu). *ICLR*, 2024. — motivates severity-tiered violations instead of a flat count (`PITCH.md`, `src/eval/metrics.py`).
+- Debenedetti, E. et al. **"AgentDojo: A Dynamic Environment to Evaluate Prompt Injection Attacks and Defenses for LLM Agents."** *NeurIPS*, 2024. — motivates measuring recovery under an adversarial suite, not only on a clean corpus (`WRITEUP.md`).
+- Ruan, Y. et al. **"Identifying the Risks of LM Agents with an LM-Emulated Sandbox"** (ToolEmu). *ICLR*, 2024. — motivates severity-tiered violations instead of a flat count (`WRITEUP.md`, `src/eval/metrics.py`).
 - Debenedetti, E. et al. **"Defeating Prompt Injections by Design"** (CaMeL), 2025. — the structural-isolation argument that provenance tracking alone (capability isolation) isn't sufficient without also constraining what untrusted data can *justify* — the basis for the 13th invariant (`docs/SPEC-as-designed.md`).
 
 ### Design notes worth knowing

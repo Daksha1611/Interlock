@@ -1,5 +1,5 @@
 """GET /compare — B0 vs B1 (vs the agent, if requested) on the same corpus
-split, same seed, same gate. The recovery table for the pitch (§6, §11.5)."""
+split, same seed, same gate. The recovery table (§6, §11.5)."""
 
 from __future__ import annotations
 

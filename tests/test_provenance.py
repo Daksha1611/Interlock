@@ -226,7 +226,7 @@ def test_agent_citing_only_trusted_fields_still_gets_its_retry(monkeypatch):
 
 def test_missing_cited_fields_is_a_known_gap_not_a_crash():
     """A model that omits cited_fields entirely produces an empty tuple, and
-    the rule passes. This is a real limitation, documented in PITCH.md: the
+    the rule passes. This is a real limitation, documented in WRITEUP.md: the
     control is declaration-based, so an agent influenced by a note that
     doesn't say so slips through. Pinned here so the gap is deliberate and
     visible rather than discovered later."""

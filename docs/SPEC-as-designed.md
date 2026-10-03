@@ -6,7 +6,7 @@
 >
 > **It is not current documentation.** For what the system actually does today, read
 > [`README.md`](../README.md); for how the result is argued, read
-> [`PITCH.md`](../PITCH.md). Where this document and the README disagree, the README
+> [`WRITEUP.md`](../WRITEUP.md). Where this document and the README disagree, the README
 > is right and the difference is deliberate — see **[What changed, and
 > why](#what-changed-and-why)** at the end, which accounts for every material
 > divergence.

@@ -1,5 +1,5 @@
 """Unit tests for eval/metrics.py — the module that produces every headline
-number in the pitch. These are synthetic (no harness run, no LLM call) so
+number in the write-up. These are synthetic (no harness run, no LLM call) so
 each metric's logic is pinned down independently of whether a real run
 happens to exercise it.
 """
@@ -413,7 +413,7 @@ def _diag_record(order_id, predicted, confidence, step=0, action=ActionType.RETR
     return r
 
 
-def test_confidently_wrong_extracts_decision_ids_for_the_pitch():
+def test_confidently_wrong_extracts_decision_ids_for_the_writeup():
     records = [
         _diag_record("o1", "ISSUER_DOWN", 0.95),      # wrong, confident  -> extracted
         _diag_record("o2", "GATEWAY_TIMEOUT", 0.91),  # right, confident  -> not

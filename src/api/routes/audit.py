@@ -1,6 +1,6 @@
 """GET /audit/{run_id}/{decision_id} — replay one decision offline, without
 an LLM call, and show that the gate's logged disposition reproduces
-exactly. This is the endpoint the pitch's live demo hits (§5, §11)."""
+exactly. This is the endpoint the live audit demo hits (§5, §11)."""
 
 from __future__ import annotations
 

@@ -1,7 +1,7 @@
 """Replay: given a run ID and a decision ID, reconstruct exactly why that
 decision went the way it did — offline, without an LLM call. Rebuilds the
 gate evaluation deterministically from the logged context. This is the
-single best thing to show live in the pitch (§5, §11 of the spec).
+single best thing to show live (§5, §11 of the spec).
 """
 
 from __future__ import annotations

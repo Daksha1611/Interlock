@@ -2,8 +2,6 @@
 
 *A bounded payment-recovery agent that cannot take an unsafe money action.*
 
-**Track 03 — AI Revenue Recovery · Razorpay AI Buildathon**
-
 *Numbers current as of 2026-09-01.* Every decision behind them is browsable at the
 **[live results and audit explorer](https://daksha1611.github.io/Interlock/)**; the
 build itself is in [`README.md`](README.md).
@@ -12,7 +10,7 @@ build itself is in [`README.md`](README.md).
 
 ## 1. The framing
 
-Razorpay already optimizes retry timing — Optimizer, smart routing, in-session retries, hundreds of millions of data points. That is not what we are pitching, and we are not claiming to beat it. The open question is what happens the moment an LLM, not a rules engine, decides to move someone's money: that system can be confidently, expensively wrong, and "be careful" in a prompt does not prove otherwise. We built the architecture that answers that question, and the adversarial harness that proves it holds.
+Razorpay already optimizes retry timing — Optimizer, smart routing, in-session retries, hundreds of millions of data points. That is not what this project is about, and it does not claim to beat it. The open question is what happens the moment an LLM, not a rules engine, decides to move someone's money: that system can be confidently, expensively wrong, and "be careful" in a prompt does not prove otherwise. We built the architecture that answers that question, and the adversarial harness that proves it holds.
 
 The claim is **not** "this recovers more money." It is: *an LLM can be given authority over money actions and be structurally incapable of taking a wrong one, with every decision auditable and replayable.*
 
@@ -250,8 +248,8 @@ tooling we built for the purpose; the other by checking a metric we had every
 incentive not to check, at a moment when it would have flattered us. Both were
 corrected against our own interest — one number deleted, one claim demoted.
 
-Every submission you review will show you a number. The question worth asking any of
-them is: what would have had to go wrong for that number to be false, and would the
+Anyone reading an evaluation will be shown a number. The question worth asking of
+any of them is: what would have had to go wrong for that number to be false, and would the
 team have noticed? We can answer that twice, with receipts. It is the same instinct as
 the gate itself — assume your own component is fallible and make the failure
 structurally visible, rather than hoping it doesn't happen.
@@ -263,7 +261,7 @@ schedule on every decision.
 
 ## 7. Limitations
 
-We list these ourselves rather than wait for a judge to find them:
+Stated here rather than left for a reader to find:
 
 - **The adversarial suite is in-sample.** Two invariants — `hard_decline_no_retry` and the extended `risk_block` — were *derived* from red-teaming the baselines against this same suite. The gate is partly fitted to these scenarios. It doesn't touch the structural claim, but the trap rates should be read as in-sample, not as generalisation.
 - **Replicates are not coverage.** 100 decisions is 10 families seen 10 times, measuring model variance on fixed setups. The confidence interval on any single family's trap rate is wide.

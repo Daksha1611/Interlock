@@ -1,5 +1,5 @@
 """Finds one good example of each disposition (ALLOW, DENY, MODIFY) in a run
-and replays each offline, for the pitch's live audit-replay demo (§5, §11
+and replays each offline, for the live audit-replay demo (§5, §11
 item 4 of the spec). Run after any harness/redteam run that used AuditTrail.
 
     PYTHONPATH=src python -m audit.demo <run_id>
