@@ -2,8 +2,6 @@
 
 *A bounded payment-recovery agent that cannot take an unsafe money action.*
 
-**Track 03 — AI Revenue Recovery · Razorpay AI Buildathon**
-
 Railway interlocking wires signals and points so that conflicting routes can never be set at the same time — safety by construction, not by procedure. The same structure here: an LLM proposes a payment-recovery action, a deterministic policy gate — ordinary Python reading a YAML file, no model call, no prompt — is the only path to moving money or contacting a customer, and the agent has no import path to the executor. Every decision, including every refusal, is logged and replayable offline.
 
 **[▶ Live results and audit explorer](https://daksha1611.github.io/Interlock/)** — browse all 315 held-out decisions: the context the gate saw, what the agent proposed and why, every invariant evaluated, and the disposition. Read-only, no backend, no keys.
@@ -243,14 +241,14 @@ uvicorn api.main:app --app-dir src --reload    # or: docker compose up --build
 
 ### References
 
-Four papers this project's evaluation design and threat model borrow from directly — cited inline where they apply, indexed here for the panel:
+Four papers this project's evaluation design and threat model borrow from directly — cited inline where they apply, indexed here:
 
 - Künzel, S. R. et al. **"Metalearners for estimating heterogeneous treatment effects using machine learning."** *PNAS*, 2019. — the T-/X-learner framing behind the not-built B2 uplift baseline (§`Results`, `Not built`).
 - Debenedetti, E. et al. **"AgentDojo: A Dynamic Environment to Evaluate Prompt Injection Attacks and Defenses for LLM Agents."** *NeurIPS*, 2024. — motivates measuring recovery under an adversarial suite, not only on a clean corpus (`PITCH.md`).
 - Ruan, Y. et al. **"Identifying the Risks of LM Agents with an LM-Emulated Sandbox"** (ToolEmu). *ICLR*, 2024. — motivates severity-tiered violations instead of a flat count (`PITCH.md`, `src/eval/metrics.py`).
 - Debenedetti, E. et al. **"Defeating Prompt Injections by Design"** (CaMeL), 2025. — the structural-isolation argument that provenance tracking alone (capability isolation) isn't sufficient without also constraining what untrusted data can *justify* — the basis for the 13th invariant (`docs/SPEC-as-designed.md`).
 
-### Design notes worth knowing before the panel
+### Design notes worth knowing
 
 - **Why B0/B1, not "no baseline"**: B1 in particular is a *reasonable* baseline (coarse hard-decline awareness, sane fixed schedule) so the comparison isn't a strawman.
 - **Why `hard_decline_no_retry` and the extended `risk_block` exist**: found live, by running the red-team suite against B0/B1 before ever spending an LLM call. B0's blind logic retried `MANDATE_REVOKED` and `EXPIRED_CARD` failures because no invariant blocked retrying a *publicly-known non-retryable reason code* — only `RISK_BLOCK` was special-cased. Fixed with `domain/reason_knowledge.py` (public decline-code knowledge, not the simulator's hidden curves) and a new rule. Two real gaps caught before they ever reached the agent.
